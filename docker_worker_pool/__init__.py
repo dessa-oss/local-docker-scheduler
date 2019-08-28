@@ -73,7 +73,12 @@ class DockerWorker:
             self._job_id = job['job_id']
             logging.info(f"[Worker {self._worker_id}] - Job {job['job_id']} started")
         except Exception as e:
-            logging.info(f"[Worker {self._worker_id}] - Job {job['job_id']} failed to start " + e)
+            logging.info(f"[Worker {self._worker_id}] - Job {job['job_id']} failed to start " + str(e))
+            job['logs'] = str(e)
+            self._job_spec = None
+            self._job_id = None
+            self._container = None
+            failed_jobs[job['job_id']] = job
             return
 
         job['start_time'] = start_time
@@ -81,6 +86,11 @@ class DockerWorker:
 
         try:
             return_code = self._container.wait()
+            job['logs'] = self._container.logs()
+            try:
+                job['logs'] = job['logs'].decode()
+            except (UnicodeDecodeError, AttributeError):
+                pass
         except Exception as e:
             self._container.kill()
             end_time = time()

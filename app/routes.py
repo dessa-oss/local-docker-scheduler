@@ -53,12 +53,24 @@ def delete_running_job(job_id):
 
 @app.route('/completed_jobs', methods=['GET'])
 def show_completed_jobs():
-    return jsonify({key: value for key, value in completed_jobs.items()})
+    result = {key: value for key, value in completed_jobs.items()}
+    return jsonify(result)
+
+
+@app.route('/completed_jobs/<string:job_id>/logs', methods=['GET'])
+def show_logs_completed_jobs(job_id):
+    return jsonify(completed_jobs[job_id]['logs'])
 
 
 @app.route('/failed_jobs', methods=['GET'])
 def show_failed_jobs():
     return jsonify({key: value for key, value in failed_jobs.items()})
+
+
+@app.route('/failed_jobs/<string:job_id>/logs', methods=['GET'])
+def show_logs_failed_jobs(job_id):
+    return jsonify(failed_jobs[job_id]['logs'])
+
 
 @app.route('/workers', methods=['GET', 'POST'])
 def workers():
