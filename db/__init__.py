@@ -1,4 +1,4 @@
-from repositionable_queue import Queue
+from db.repositionable_queue import Queue
 from db.sqlite_dict_connection import connect
 
 
