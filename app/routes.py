@@ -45,6 +45,12 @@ def show_running_jobs():
     return jsonify({key: value for key, value in running_jobs.items()})
 
 
+@app.route('/running_jobs/<string:job_id>', methods=['DELETE'])
+def delete_running_job(job_id):
+    docker_worker_pool.stop(job_id)
+    return make_response(jsonify({}), 204)
+
+
 @app.route('/completed_jobs', methods=['GET'])
 def show_completed_jobs():
     return jsonify({key: value for key, value in completed_jobs.items()})
@@ -72,5 +78,5 @@ def workers():
 
 @app.route('/workers/<int:worker_id>', methods=['DELETE'])
 def delete_worker(worker_id):
-    docker_worker_pool.remove(worker_id)
+    docker_worker_pool.kill(worker_id)
     return make_response(jsonify({}), 204)
