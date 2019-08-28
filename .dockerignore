@@ -1,0 +1,7 @@
+venv
+*.sqlite
+.git
+.idea
+__pychache__
+.dockerignore
+.gitignore

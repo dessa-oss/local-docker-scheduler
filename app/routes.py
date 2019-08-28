@@ -51,6 +51,14 @@ def delete_running_job(job_id):
     return make_response(jsonify({}), 204)
 
 
+@app.route('/running_jobs/<string:job_id>/logs', methods=['GET'])
+def show_logs_running_jobs(job_id):
+    worker = docker_worker_pool.worker_by_job_id(job_id)
+    if worker is None:
+        raise KeyError("Job id not found")
+    return jsonify(worker.logs())
+
+
 @app.route('/completed_jobs', methods=['GET'])
 def show_completed_jobs():
     result = {key: value for key, value in completed_jobs.items()}

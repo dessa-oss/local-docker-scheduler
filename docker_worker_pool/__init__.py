@@ -42,19 +42,32 @@ class DockerWorker:
         self.stop(reschedule)
         self._APSSchedulerJob.remove()
 
+    def logs(self):
+        if self._container is not None:
+            logs = self._container.logs()
+
+            try:
+                logs = logs.decode()
+            except (UnicodeDecodeError, AttributeError):
+                pass
+
+            return logs
+        else:
+            return None
+
     def poll_queue(self):
-        logging.debug(f"[Worker {self._worker_id}] - pulling")
+        logging.debug(f"[Worker {self._worker_id}] - polling")
         label = "atlas_job"
-
-        client = docker.from_env()
-
-        lc = LogConfig(type=LogConfig.types.JSON, config={'max-size': '1g', 'labels': 'atlas_logging'})
 
         try:
             job = copy.deepcopy(queue.pop(0))
         except IndexError:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
             return
+
+        client = docker.from_env()
+
+        lc = LogConfig(type=LogConfig.types.JSON, config={'max-size': '1g', 'labels': 'atlas_logging'})
 
         job['spec']['detach'] = True
         job['spec']['log_config'] = lc
@@ -134,13 +147,20 @@ def kill(worker_id, reschedule=False):
     del _workers[worker_id]
 
 
-def stop(job_id, reschedule=False):
+def worker_by_job_id(job_id):
     for worker_id, worker in _workers.items():
         if worker.job_id == job_id:
-            worker.stop(reschedule)
-            break
+            return worker
     else:
+        return None
+
+
+def stop(job_id, reschedule=False):
+    worker = worker_by_job_id(job_id)
+    if worker is None:
         raise KeyError("Job id was not found")
+    else:
+        worker.stop(reschedule)
 
 
 def worker_job(worker_id):
