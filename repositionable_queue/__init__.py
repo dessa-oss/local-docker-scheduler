@@ -5,4 +5,8 @@ class Queue(list):
     def reposition(self, original_position, new_position):
         temp = self[original_position]
         del self[original_position]
-        self.insert(new_position, temp)
+        try:
+            self.insert(new_position, temp)
+        except IndexError:
+            self.insert(original_position, temp)
+            raise

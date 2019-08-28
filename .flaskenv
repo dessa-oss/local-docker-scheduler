@@ -1,0 +1,2 @@
+FLASK_APP=docker_scheduler
+FLASK_DEBUG=1
