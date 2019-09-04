@@ -12,4 +12,8 @@ WORKDIR /app/local-docker-scheduler
 
 VOLUME ["/root/.docker", "/var/run/docker.sock"]
 
-CMD python docker_scheduler.py
+EXPOSE 5000
+
+ENTRYPOINT ["python", "-m", "local_docker_scheduler", "-p 5000"]
+
+CMD ["-H", "0.0.0.0"]
