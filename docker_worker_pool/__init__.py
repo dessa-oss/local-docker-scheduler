@@ -5,7 +5,7 @@ import logging
 from db import queue, running_jobs, completed_jobs, failed_jobs
 import copy
 from time import time
-from app import app
+from local_docker_scheduler import app
 
 
 _workers = {}
@@ -32,7 +32,7 @@ class DockerWorker:
         if reschedule and self._job_spec:
             queue.insert(0, self._job_spec)
         if self._container:
-            self._container.kill()
+            self._container.stop()
         del running_jobs[self._job_id]
         self._job_spec = None
         self._job_id = None

@@ -3,7 +3,7 @@ from flask_apscheduler import APScheduler
 
 app = Flask(__name__)
 
-from app import routes
+from local_docker_scheduler import routes
 scheduler = APScheduler()
 
 # it is also possible to enable the API directly

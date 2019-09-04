@@ -1,4 +1,4 @@
-from app import app
+from local_docker_scheduler import app
 from db import queue, running_jobs, completed_jobs, failed_jobs
 from flask import jsonify, request, make_response
 from time import time
