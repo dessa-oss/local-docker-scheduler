@@ -4,6 +4,7 @@ from flask import jsonify, request, make_response
 from time import time
 from uuid import uuid4
 import docker_worker_pool
+import logging
 
 
 @app.route('/')
@@ -62,6 +63,16 @@ def show_logs_running_jobs(job_id):
 @app.route('/completed_jobs', methods=['GET'])
 def show_completed_jobs():
     result = {key: value for key, value in completed_jobs.items()}
+    logging.info(request.args.get("sort"))
+    if request.args.get("sort") is not None:
+        reverse = {"asc": False, "desc": True}
+        fields = [(field + ":asc").split(":")[0:2] for field in request.args.get("sort").split(",")]
+        logging.debug(fields)
+        for field in fields:
+            try:
+                result = sorted(result.items(), reverse=reverse[field[1]], key=lambda x: x[1][field[0]])
+            except KeyError:
+                return f"Bad sort request in {field}", 400
     return jsonify(result)
 
 
