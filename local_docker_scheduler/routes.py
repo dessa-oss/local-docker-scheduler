@@ -15,10 +15,10 @@ def show_home_page():
 @app.route('/queued_jobs', methods=['GET', 'POST'])
 def queued_jobs():
     if request.method == 'POST':
-        job_id = uuid4().hex
+        job_id = request.json.get('job_id', uuid4().hex)
         queue.append({'queued_time': time(),
                       'job_id': job_id,
-                      'spec': request.json})
+                      'spec': request.json['spec']})
         return make_response(jsonify(job_id), 201)
     else:
         return jsonify({i: {**val, 'position': i} for i, val in enumerate(queue)})
@@ -78,7 +78,11 @@ def show_completed_jobs():
 
 @app.route('/completed_jobs/<string:job_id>/logs', methods=['GET'])
 def show_logs_completed_jobs(job_id):
-    return jsonify(completed_jobs[job_id]['logs'])
+    try:
+        response = jsonify(completed_jobs[job_id]['logs'])
+    except KeyError:
+        return f"Bad job id {job_id}", 404
+    return response
 
 
 @app.route('/failed_jobs', methods=['GET'])
