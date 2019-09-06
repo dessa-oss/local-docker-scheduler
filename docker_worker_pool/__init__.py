@@ -33,7 +33,10 @@ class DockerWorker:
             queue.insert(0, self._job_spec)
         if self._container:
             self._container.stop()
-        del running_jobs[self._job_id]
+        try:
+            del running_jobs[self._job_id]
+        except KeyError:
+            pass
         self._job_spec = None
         self._job_id = None
         self._container = None
