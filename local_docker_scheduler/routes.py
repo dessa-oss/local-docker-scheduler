@@ -58,6 +58,14 @@ def show_logs_running_jobs(job_id):
     if worker is None:
         raise KeyError("Job id not found")
     return jsonify(worker.logs())
+#
+#
+# @app.route('/running_jobs/<string:job_id>/log_path', methods=['GET'])
+# def show_log_path_running_jobs(job_id):
+#     worker = docker_worker_pool.worker_by_job_id(job_id)
+#     if worker is None:
+#         raise KeyError("Job id not found")
+#     return jsonify(worker.log_path())
 
 
 @app.route('/running_jobs/<string:job_id>/log_path', methods=['GET'])

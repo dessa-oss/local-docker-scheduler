@@ -57,6 +57,13 @@ class DockerWorker:
             return logs
         else:
             return None
+    #
+    # def log_path(self):
+    #     if self._container is not None:
+    #         api_client = docker.APIClient()
+    #         return api_client.inspect_container(self._container.id)['LogPath']
+    #     else:
+    #         return None
 
     def log_path(self):
         if self._container is not None:
