@@ -115,3 +115,45 @@ def workers():
 def delete_worker(worker_id):
     docker_worker_pool.kill(worker_id)
     return make_response(jsonify({}), 204)
+
+@app.route('/jobs/<string:job_id>', methods=['GET'])
+def get_job(job_id):
+    if job_id in failed_jobs:
+        response = {
+            "job_id": job_id,
+            "logs": failed_jobs[job_id]['logs'],
+            "status": "failed",
+            "spec": failed_jobs[job_id]['spec']
+        }
+        return make_response(jsonify(response), 200)
+
+    if job_id in completed_jobs:
+        response = {
+            "job_id": job_id,
+            "logs": completed_jobs[job_id]['logs'],
+            "status": "failed",
+            "spec": completed_jobs[job_id]['spec']
+        }
+        return make_response(jsonify(response), 200)
+
+    worker = docker_worker_pool.worker_by_job_id(job_id)
+    if worker:
+        response = {
+            "job_id": job_id,
+            "logs": worker.logs(),
+            "status": "running",
+            "spec": running_jobs[job_id]['spec']
+        }
+        return make_response(jsonify(response), 200)
+
+    for job in queue:
+        if job['job_id'] == job_id:
+            response = {
+                "job_id": job_id,
+                "logs": "",
+                "status": "queued",
+                "spec": job['spec']
+            }
+            return make_response(jsonify(response), 200)
+
+    return f"Bad job id {job_id}", 404
