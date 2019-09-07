@@ -19,6 +19,7 @@ class DockerWorker:
         self._job_spec = None
         self._job_id = None
         self._container = None
+        self._client = docker.from_env()
 
     @property
     def job_id(self):
@@ -81,8 +82,6 @@ class DockerWorker:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
             return
 
-        client = docker.from_env()
-
         lc = LogConfig(type=LogConfig.types.JSON, config={'max-size': '1g', 'labels': 'atlas_logging'})
 
         job['spec']['detach'] = True
@@ -97,7 +96,7 @@ class DockerWorker:
 
         try:
             start_time = time()
-            self._container = client.containers.run(**job['spec'])
+            self._container = self._client.containers.run(**job['spec'])
             self._job_spec = job['spec']
             self._job_id = job['job_id']
             logging.info(f"[Worker {self._worker_id}] - Job {job['job_id']} started")
