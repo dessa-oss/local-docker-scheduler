@@ -77,7 +77,8 @@ class DockerWorker:
         label = "atlas_job"
 
         try:
-            job = copy.deepcopy(queue[0])
+            job = copy.deepcopy(queue.pop(0))
+            running_jobs[job['job_id']] = job
         except IndexError:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
             return
@@ -106,8 +107,8 @@ class DockerWorker:
             self._job_spec = None
             self._job_id = None
             self._container = None
-            queue.pop(0)
             failed_jobs[job['job_id']] = job
+            del running_jobs[job['job_id']]
             return
 
         job['start_time'] = start_time
