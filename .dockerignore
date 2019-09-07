@@ -5,3 +5,4 @@ venv
 __pychache__
 .dockerignore
 .gitignore
+*.yaml

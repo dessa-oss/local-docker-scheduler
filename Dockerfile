@@ -10,7 +10,7 @@ COPY . /app/local-docker-scheduler/
 
 WORKDIR /app/local-docker-scheduler
 
-VOLUME ["/root/.docker", "/var/run/docker.sock"]
+VOLUME ["/root/.docker", "/var/run/docker.sock", "/app/local-docker-scheduler/tracker_client_plugins.yaml"]
 
 EXPOSE 5000
 
