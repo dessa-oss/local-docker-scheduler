@@ -18,7 +18,8 @@ def queued_jobs():
         job_id = request.json.get('job_id', uuid4().hex)
         queue.append({'queued_time': time(),
                       'job_id': job_id,
-                      'spec': request.json['spec']})
+                      'spec': request.json['spec'],
+                      'metadata': request.json.get('metadata', {})})
         return make_response(jsonify(job_id), 201)
     else:
         return jsonify({i: {**val, 'position': i} for i, val in enumerate(queue)})
