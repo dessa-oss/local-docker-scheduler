@@ -5,6 +5,7 @@ from time import time
 from uuid import uuid4
 import docker_worker_pool
 import logging
+from tracker_client_plugins import tracker_clients
 
 
 @app.route('/')
@@ -20,6 +21,7 @@ def queued_jobs():
                       'job_id': job_id,
                       'spec': request.json['spec'],
                       'metadata': request.json.get('metadata', {})})
+        tracker_clients.queued(queue[-1])
         return make_response(jsonify(job_id), 201)
     else:
         return jsonify({i: {**val, 'position': i} for i, val in enumerate(queue)})

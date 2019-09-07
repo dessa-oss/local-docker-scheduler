@@ -6,6 +6,7 @@ from db import queue, running_jobs, completed_jobs, failed_jobs
 import copy
 from time import time
 from local_docker_scheduler import app
+from tracker_client_plugins import tracker_clients
 
 
 _workers = {}
@@ -112,8 +113,7 @@ class DockerWorker:
             return
 
         job['start_time'] = start_time
-        queue.pop(0)
-        running_jobs[job['job_id']] = job
+        tracker_clients.running(job)
 
         try:
             return_code = self._container.wait()
@@ -129,6 +129,7 @@ class DockerWorker:
 
             job['end_time'] = end_time
             failed_jobs[job['job_id']] = job
+            tracker_clients.failed(job)
         else:
             end_time = time()
             logging.info(f"[Worker {self._worker_id}] - Job {job['job_id']} finished with return code {return_code}")
@@ -137,8 +138,10 @@ class DockerWorker:
             job['return_code'] = return_code
             if not return_code['StatusCode']:
                 completed_jobs[job['job_id']] = job
+                tracker_clients.completed(job)
             else:
                 failed_jobs[job['job_id']] = job
+                tracker_clients.failed(job)
         finally:
             del running_jobs[job['job_id']]
             self._job_spec = None
