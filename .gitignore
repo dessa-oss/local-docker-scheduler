@@ -2,3 +2,4 @@ venv
 *.sqlite
 .idea
 __pychache__
+*.yaml
