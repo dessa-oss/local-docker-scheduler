@@ -30,11 +30,11 @@ class DockerWorker:
     def job_spec(self):
         return self._job_spec
 
-    def stop(self, reschedule):
+    def stop_job(self, reschedule, timeout=5):
         if reschedule and self._job_spec:
             queue.insert(0, self._job_spec)
         if self._container:
-            self._container.stop()
+            self._container.stop(timeout=timeout)
         try:
             del running_jobs[self._job_id]
         except KeyError:
@@ -43,8 +43,8 @@ class DockerWorker:
         self._job_id = None
         self._container = None
 
-    def kill(self, reschedule):
-        self.stop(reschedule)
+    def delete(self, reschedule):
+        self.stop_job(reschedule)
         self._APSSchedulerJob.remove()
 
     def logs(self):
@@ -155,8 +155,8 @@ def add():
     return str(worker_id)
 
 
-def kill(worker_id, reschedule=False):
-    _workers[worker_id].kill(reschedule)
+def delete_worker(worker_id, reschedule=False):
+    _workers[worker_id].delete(reschedule)
     del _workers[worker_id]
 
 
@@ -168,12 +168,12 @@ def worker_by_job_id(job_id):
         return None
 
 
-def stop(job_id, reschedule=False):
+def stop_job(job_id, reschedule=False):
     worker = worker_by_job_id(job_id)
     if worker is None:
         raise KeyError("Job id was not found")
     else:
-        worker.stop(reschedule)
+        worker.stop_job(reschedule)
 
 
 def worker_job(worker_id):

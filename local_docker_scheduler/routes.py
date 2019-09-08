@@ -51,7 +51,7 @@ def show_running_jobs():
 
 @app.route('/running_jobs/<string:job_id>', methods=['DELETE'])
 def delete_running_job(job_id):
-    docker_worker_pool.stop(job_id)
+    docker_worker_pool.stop_job(job_id)
     return make_response(jsonify({}), 204)
 
 
@@ -132,7 +132,7 @@ def workers():
 
 @app.route('/workers/<int:worker_id>', methods=['DELETE'])
 def delete_worker(worker_id):
-    docker_worker_pool.kill(worker_id)
+    docker_worker_pool.delete_worker(worker_id)
     return make_response(jsonify({}), 204)
 
 @app.route('/jobs/<string:job_id>', methods=['GET'])
