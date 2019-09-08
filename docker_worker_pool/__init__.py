@@ -75,7 +75,6 @@ class DockerWorker:
 
     def poll_queue(self):
         logging.debug(f"[Worker {self._worker_id}] - polling")
-        label = "atlas_job"
 
         try:
             job = copy.deepcopy(queue.pop(0))
@@ -88,13 +87,6 @@ class DockerWorker:
 
         job['spec']['detach'] = True
         job['spec']['log_config'] = lc
-        if 'labels' in job['spec']:
-            if isinstance(job['spec']['labels'], collections.Mapping):
-                job['spec']['labels'][label] = ""
-            else:
-                job['spec']['labels'].append(label)
-        else:
-            job['spec']['labels'] = [label]
 
         try:
             start_time = time()
