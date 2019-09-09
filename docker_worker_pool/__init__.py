@@ -22,6 +22,16 @@ class DockerWorker:
         self._client = docker.from_env()
 
     @property
+    def status(self):
+        if self._job:
+            if self._container:
+                return "running"
+            else:
+                return "pending"
+        else:
+            return "pending"
+
+    @property
     def job(self):
         return self._job
 

@@ -162,8 +162,8 @@ def get_job(job_id):
         response = {
             "job_id": job_id,
             "logs": worker.logs(),
-            "status": "running",
-            "spec": running_jobs[job_id]['spec']
+            "status": worker.status,
+            "spec": worker.job['spec']
         }
         return make_response(jsonify(response), 200)
 
