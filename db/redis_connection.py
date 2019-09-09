@@ -23,7 +23,10 @@ class RedisDict:
         return [loads(field) for field in self._redis.hkeys(self._key)]
 
     def __delitem__(self, field):
-        return self._redis.hdel(self._key, field)
+        return self._redis.hdel(self._key, dumps(field))
+
+    def __contains__(self, field):
+        return self._redis.hexists(self._key, dumps(field)) == 1
 
 
 class RedisList:
@@ -42,6 +45,14 @@ class RedisList:
 
     def __delitem__(self, index):
         return self._redis.lrem(self._key, 1, self[index])
+
+    def __contains__(self, value):
+        print(f"looking up {value} in {self._key}")
+        for i in self:
+            if i == value:
+                return True
+        else:
+            return False
 
     def insert(self, index, value):
         return self._redis.linsert(self._key, "before", self[index], dumps(value))
