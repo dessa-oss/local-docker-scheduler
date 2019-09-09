@@ -23,3 +23,17 @@ name_of_plugin2:
   ...
 ```
 where `name_of_plugin` is the name of the Python subpackage inside the `tracker_client_plugins` package, and `key:value` pairs are arguments that will be fed into the plugin. Please see documentation for each plugin.
+
+## Foundations submission configuration
+
+```
+job_deployment_env: local_docker_scheduler_plugin
+
+job_results_root: <path to store finished jobs>
+working_dir_root: <temporary directory where jobs are stored for execution by workers>
+scheduler_url: <the host and port from the How to run section above>
+container_config_root: <config/ folder containing submission and execution subfolders: configuration files mounted for the worker container>
+
+cache_config:
+  end_point: /cache_end_point
+```
