@@ -24,6 +24,13 @@ name_of_plugin2:
 ```
 where `name_of_plugin` is the name of the Python subpackage inside the `tracker_client_plugins` package, and `key:value` pairs are arguments that will be fed into the plugin. Please see documentation for each plugin.
 
+Example:
+```
+redis_tracker_client:
+  host: "127.0.0.1"
+  port: 6379
+```
+
 ## Foundations submission configuration
 
 The following is the configuration file you will need in your $FOUNDATIONS_HOME/config/submission directory in order for the Foundations SDK to know how to use this scheduler.
