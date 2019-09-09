@@ -153,7 +153,7 @@ def delete_worker(worker_id, reschedule=False):
 
 def worker_by_job_id(job_id):
     for worker_id, worker in _workers.items():
-        if worker['job_id'] == job_id:
+        if worker.job is not None and worker.job['job_id'] == job_id:
             return worker
     else:
         return None
