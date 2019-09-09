@@ -6,6 +6,17 @@
 
 where `host:port` is where the REST API will bind to, and -d starts the service in debug mode
 
+If using docker to run, you will need to mount the following volumes:
+
+```
+-v <docker socket>:/var/run/docker.sock
+-v <docker configuration>:/root/.docker
+-v <path to tracker_client_plugins.config.yaml>:/app/local-docker-scheduler/tracker_client_plugins.config.yaml
+-v <path to database.config.yaml>:/app/local-docker-scheduler/database.config.yaml
+```
+
+Please see sections below on details on configuration files
+
 ## How to build Docker image
 
 `docker build -f Dockerfile -t <name>:<tag> .`
@@ -30,6 +41,10 @@ redis_tracker_client:
   host: "127.0.0.1"
   port: 6379
 ```
+
+## Database configuration
+
+The data
 
 ## Foundations submission configuration
 
