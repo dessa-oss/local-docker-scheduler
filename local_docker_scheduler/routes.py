@@ -1,4 +1,4 @@
-from local_docker_scheduler import app
+from local_docker_scheduler import get_app
 from db import queue, running_jobs, completed_jobs, failed_jobs
 from flask import jsonify, request, make_response
 from time import time
@@ -7,6 +7,8 @@ import docker_worker_pool
 import logging
 from tracker_client_plugins import tracker_clients
 
+
+app = get_app()
 
 @app.route('/')
 def show_home_page():

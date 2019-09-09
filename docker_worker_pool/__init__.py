@@ -1,17 +1,17 @@
-import docker
-from docker.types import LogConfig
-import collections
 import logging
-from db import queue, running_jobs, completed_jobs, failed_jobs
 import copy
 from time import time
-from local_docker_scheduler import app
+
+import docker
+from docker.types import LogConfig
+
+from db import queue, running_jobs, completed_jobs, failed_jobs
+from local_docker_scheduler import get_app
 from tracker_client_plugins import tracker_clients
 
 
 _workers = {}
 _interval = 2
-
 
 class DockerWorker:
     def __init__(self, worker_id, APSSchedulerJob):
@@ -137,7 +137,7 @@ def add():
         worker_id = sorted(_workers)[-1] + 1
     except IndexError:
         worker_id = 0
-    job = app.apscheduler.add_job(func=worker_job,
+    job = get_app().apscheduler.add_job(func=worker_job,
                                   trigger='interval',
                                   seconds=_interval,
                                   args=[worker_id],

@@ -1,18 +1,43 @@
-from flask import Flask
-from flask_apscheduler import APScheduler
-import atexit
+_app = None
 
-app = Flask(__name__)
 
-from local_docker_scheduler import routes
-scheduler = APScheduler()
+def get_app(num_workers=1):
+    import atexit
 
-# it is also possible to enable the API directly
-# scheduler.api_enabled = True
-scheduler.init_app(app)
-atexit.register(lambda: scheduler.shutdown(wait=False))
+    import yaml
+    from flask import Flask
+    from flask_apscheduler import APScheduler
 
-import docker_worker_pool
-docker_worker_pool.add()
+    from tracker_client_plugins import tracker_clients
+    import docker_worker_pool
+    from local_docker_scheduler import routes
 
-scheduler.start()
+    global _app
+    if _app is not None:
+        return _app
+
+    _app = Flask(__name__)
+
+    scheduler = APScheduler()
+
+    # it is also possible to enable the API directly
+    # scheduler.api_enabled = True
+    scheduler.init_app(_app)
+    atexit.register(lambda: scheduler.shutdown(wait=False))
+
+    # load tracker plugins
+    try:
+        with open('tracker_client_plugins.yaml', 'r') as f:
+            tracker_dict = yaml.load(f)
+
+        for plugin_name, kwargs in tracker_dict.items():
+            tracker_clients.add(plugin_name, **kwargs)
+    except FileNotFoundError:
+        pass
+
+    for i in range(num_workers):
+        docker_worker_pool.add()
+
+    scheduler.start()
+
+    return _app
