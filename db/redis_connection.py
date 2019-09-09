@@ -8,7 +8,10 @@ class RedisDict:
         self._key = key
 
     def __getitem__(self, field):
-        return loads(self._redis.hget(self._key, dumps(field)))
+        response = self._redis.hget(self._key, dumps(field))
+        if response is None:
+            raise IndexError
+        return loads(response)
 
     def __setitem__(self, field, value):
         return self._redis.hset(self._key, dumps(field), dumps(value))
