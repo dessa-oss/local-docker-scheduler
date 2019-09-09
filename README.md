@@ -26,6 +26,8 @@ where `name_of_plugin` is the name of the Python subpackage inside the `tracker_
 
 ## Foundations submission configuration
 
+The following is the configuration file you will need in your $FOUNDATIONS_HOME/config/submission directory in order for the Foundations SDK to know how to use this scheduler.
+
 ```
 job_deployment_env: local_docker_scheduler_plugin
 
