@@ -16,10 +16,10 @@ Place a `tracker_client_plugins.yaml` in the project folder will make the schedu
 Format of the yaml file should be:
 ```
 name_of_plugin1:
-  - key1: value1
-  - key2: value2
+  key1: value1
+  key2: value2
 name_of_plugin2:
-  - key1: value1
+  key1: value1
   ...
 ```
 where `name_of_plugin` is the name of the Python subpackage inside the `tracker_client_plugins` package, and `key:value` pairs are arguments that will be fed into the plugin. Please see documentation for each plugin.
