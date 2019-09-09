@@ -17,30 +17,86 @@ class DockerWorker:
     def __init__(self, worker_id, APSSchedulerJob):
         self._worker_id = worker_id
         self._APSSchedulerJob = APSSchedulerJob
-        self._job_spec = None
-        self._job_id = None
+        self._job = None
         self._container = None
         self._client = docker.from_env()
 
     @property
-    def job_id(self):
-        return self._job_id
+    def job(self):
+        return self._job
 
-    @property
-    def job_spec(self):
-        return self._job_spec
+    def run_job(self, job):
+        self._job = job
+
+        running_jobs[self.job['job_id']] = self.job
+
+        self.job['spec']['detach'] = True
+
+        lc = LogConfig(type=LogConfig.types.JSON, config={'max-size': '1g', 'labels': 'atlas_logging'})
+        self.job['spec']['log_config'] = lc
+
+        try:
+            self.job['start_time'] = time()
+            self._container = self._client.containers.run(**self.job['spec'])
+            logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} started")
+        except Exception as e:
+            logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} failed to start " + str(e))
+            self.job['logs'] = str(e)
+            self.stop_job(timeout=0)
+            return
+
+        tracker_clients.running(self.job)
+
+        try:
+            return_code = self._container.wait()
+            self.job['logs'] = self._container.logs()
+            try:
+                self.job['logs'] = self.job['logs'].decode()
+            except (UnicodeDecodeError, AttributeError):
+                pass
+        except Exception as e:
+            self.job['end_time'] = time()
+            logging.info(f"[Worker {self._worker_id}] - Worker {self._worker_id} failed to reconnect to job {self.job['job_id']}, killing job now")
+
+            self.stop_job(timeout=0)
+        else:
+            self.job['end_time'] = time()
+            self.job['return_code'] = return_code
+            logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} finished with return code {return_code}")
+
+            if not return_code['StatusCode']:
+                completed_jobs[self.job['job_id']] = self.job
+                tracker_clients.completed(self.job)
+            else:
+                failed_jobs[self.job['job_id']] = self.job
+                tracker_clients.failed(self.job)
+        finally:
+            del running_jobs[self.job['job_id']]
+            self._job = None
+            self._container = None
 
     def stop_job(self, reschedule, timeout=5):
-        if reschedule and self._job_spec:
-            queue.insert(0, self._job_spec)
+        if reschedule:
+            try:
+                queue.insert(0, self.job['job_spec'])
+            except (KeyError, TypeError):
+                pass
+
         if self._container:
             self._container.stop(timeout=timeout)
+
         try:
-            del running_jobs[self._job_id]
-        except KeyError:
+            del running_jobs[self.job['job_id']]
+        except TypeError:
             pass
-        self._job_spec = None
-        self._job_id = None
+
+        try:
+            failed_jobs[self.job['job_id']] = self.job
+            tracker_clients.failed(self.job)
+        except TypeError:
+            pass
+
+        self._job = None
         self._container = None
 
     def delete(self, reschedule):
@@ -59,13 +115,6 @@ class DockerWorker:
             return logs
         else:
             return None
-    #
-    # def log_path(self):
-    #     if self._container is not None:
-    #         api_client = docker.APIClient()
-    #         return api_client.inspect_container(self._container.id)['LogPath']
-    #     else:
-    #         return None
 
     def container_id(self):
         if self._container is not None:
@@ -78,67 +127,9 @@ class DockerWorker:
 
         try:
             job = copy.deepcopy(queue.pop(0))
-            running_jobs[job['job_id']] = job
+            self.run_job(job)
         except IndexError:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
-            return
-
-        lc = LogConfig(type=LogConfig.types.JSON, config={'max-size': '1g', 'labels': 'atlas_logging'})
-
-        job['spec']['detach'] = True
-        job['spec']['log_config'] = lc
-
-        try:
-            start_time = time()
-            self._container = self._client.containers.run(**job['spec'])
-            self._job_spec = job['spec']
-            self._job_id = job['job_id']
-            logging.info(f"[Worker {self._worker_id}] - Job {job['job_id']} started")
-        except Exception as e:
-            logging.info(f"[Worker {self._worker_id}] - Job {job['job_id']} failed to start " + str(e))
-            job['logs'] = str(e)
-            self._job_spec = None
-            self._job_id = None
-            self._container = None
-            failed_jobs[job['job_id']] = job
-            del running_jobs[job['job_id']]
-            return
-
-        job['start_time'] = start_time
-        tracker_clients.running(job)
-
-        try:
-            return_code = self._container.wait()
-            job['logs'] = self._container.logs()
-            try:
-                job['logs'] = job['logs'].decode()
-            except (UnicodeDecodeError, AttributeError):
-                pass
-        except Exception as e:
-            self._container.kill()
-            end_time = time()
-            logging.info(f"[Worker {self._worker_id}] - Worker {self._worker_id} failed to reconnect to job {job['job_id']}, killing job now")
-
-            job['end_time'] = end_time
-            failed_jobs[job['job_id']] = job
-            tracker_clients.failed(job)
-        else:
-            end_time = time()
-            logging.info(f"[Worker {self._worker_id}] - Job {job['job_id']} finished with return code {return_code}")
-
-            job['end_time'] = end_time
-            job['return_code'] = return_code
-            if not return_code['StatusCode']:
-                completed_jobs[job['job_id']] = job
-                tracker_clients.completed(job)
-            else:
-                failed_jobs[job['job_id']] = job
-                tracker_clients.failed(job)
-        finally:
-            del running_jobs[job['job_id']]
-            self._job_spec = None
-            self._job_id = None
-            self._container = None
 
 
 def add():
@@ -162,7 +153,7 @@ def delete_worker(worker_id, reschedule=False):
 
 def worker_by_job_id(job_id):
     for worker_id, worker in _workers.items():
-        if worker.job_id == job_id:
+        if worker['job_id'] == job_id:
             return worker
     else:
         return None
