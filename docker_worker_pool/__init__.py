@@ -85,7 +85,7 @@ class DockerWorker:
             self._job = None
             self._container = None
 
-    def stop_job(self, reschedule, timeout=5):
+    def stop_job(self, reschedule=False, timeout=5):
         if reschedule:
             try:
                 queue.insert(0, self.job['job_spec'])
