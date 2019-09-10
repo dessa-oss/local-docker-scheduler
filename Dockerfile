@@ -14,6 +14,8 @@ VOLUME ["/root/.docker", "/var/run/docker.sock", "/app/local-docker-scheduler/tr
 
 EXPOSE 5000
 
-ENTRYPOINT ["python", "-m", "local_docker_scheduler", "-p 5000"]
+# ENTRYPOINT ["python", "-m", "local_docker_scheduler", "-p 5000"]
 
-CMD ["-H", "0.0.0.0"]
+#CMD ["-H", "0.0.0.0"]
+
+ENTRYPOINT gunicorn --workers=1 -b 0.0.0.0:5000 local_docker_scheduler:"get_app()"
