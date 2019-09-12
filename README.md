@@ -23,7 +23,7 @@ Please see sections below on details on configuration files
 
 ## Tracker client plugins configuration
 
-Place a `tracker_client_plugins.yaml` in the project folder will make the scheduler load the designated plugins at start.  
+Placing a `tracker_client_plugins.yaml` in the project directory will make the scheduler load the designated plugins at start.  
 Format of the yaml file should be:
 ```
 name_of_plugin1:
@@ -44,7 +44,66 @@ redis_tracker_client:
 
 ## Database configuration
 
-The data
+The database configuration allows the scheduler to use different backend implementations to store states and results of the jobs. Currently, queued, running, failed, and completed jobs can support different backends.
+
+A `database.config.yaml` must be present in the project directory. The structure needs to look like:
+
+```
+queue:
+  type: <name_of_plugin>
+  arg:
+    key1: value1
+    key2: value2
+    ...
+failed_jobs:
+  type: <name_of_plugin>
+  arg:
+    key1: value1
+    key2: value2
+    ...
+completed_jobs:
+  type: <name_of_plugin>
+  arg:
+    key1: value1
+    key2: value2
+    ...
+running_jobs:
+  type: <name_of_plugin>
+  arg:
+    key1: value1
+    key2: value2
+    ...
+```
+where `<name_of_plugin>` is a dot separated path to the relevant backend. It is a callable and the scheduler will provide it with the arguments as keyword arguments at start up. An example would look like:
+
+```
+queue:
+  type: redis_connection.RedisList
+  args:
+    key: queue
+    host: foundations-redis
+    port: 6379
+failed_jobs:
+  type: redis_connection.RedisDict
+  args:
+    key: failed_jobs
+    host: foundations-redis
+    port: 6379
+completed_jobs:
+  type: redis_connection.RedisDict
+  args:
+    key: completed_jobs
+    host: foundations-redis
+    port: 6379
+running_jobs:
+  type: redis_connection.RedisDict
+  args:
+    key: running_jobs
+    host: foundations-redis
+    port: 6379
+```
+
+For the redis_connection objects, the host and port are used to connect to a Redis server, while the key is the redis key used to store the related data.
 
 ## Foundations submission configuration
 
