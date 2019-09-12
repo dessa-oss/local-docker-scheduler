@@ -22,7 +22,7 @@ def _db_class(t):
 
 
 with open('database.config.yaml', 'r') as f:
-    database_dict = yaml.load(f)
+    database_dict = yaml.load(f, Loader=yaml.FullLoader)
 
 failed_jobs = _db_class(database_dict['failed_jobs']['type'])(**database_dict['failed_jobs']['args'])
 completed_jobs = _db_class(database_dict['completed_jobs']['type'])(**database_dict['completed_jobs']['args'])

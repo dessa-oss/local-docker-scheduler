@@ -28,7 +28,7 @@ def get_app(num_workers=1):
     # load tracker plugins
     try:
         with open('tracker_client_plugins.yaml', 'r') as f:
-            tracker_dict = yaml.load(f)
+            tracker_dict = yaml.load(f, Loader=yaml.FullLoader)
 
         for plugin_name, kwargs in tracker_dict.items():
             tracker_clients.add(plugin_name, **kwargs)
