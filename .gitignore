@@ -1,5 +1,5 @@
 venv
 *.sqlite
 .idea
-__pychache__
+__pycache__
 *.yaml

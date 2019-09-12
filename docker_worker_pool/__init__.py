@@ -36,6 +36,7 @@ class DockerWorker:
         return self._job
 
     def run_job(self, job):
+        import subprocess
         self._job = job
 
         running_jobs[self.job['job_id']] = self.job
@@ -45,10 +46,22 @@ class DockerWorker:
         lc = LogConfig(type=LogConfig.types.JSON, config={'max-size': '1g', 'labels': 'atlas_logging'})
         self.job['spec']['log_config'] = lc
 
+        if self.job['spec'].get('runtime') == 'nvidia':
+            try:
+                gpu_stats = subprocess.check_output(["nvidia-smi", "--format=csv",
+                                                     "--query-gpu=memory.used,memory.free"])
+            except FileNotFoundError as fe:
+                logging.error("NVIDIA container run-time not found")
+                logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} failed to start " + str(fe))
+                self.job['logs'] = str(fe)
+                self.stop_job(timeout=0)
+                return
+
         try:
             self.job['start_time'] = time()
             self._container = self._client.containers.run(**self.job['spec'])
             logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} started")
+
         except Exception as e:
             logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} failed to start " + str(e))
             self.job['logs'] = str(e)

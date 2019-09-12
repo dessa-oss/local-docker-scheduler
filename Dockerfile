@@ -10,12 +10,12 @@ COPY . /app/local-docker-scheduler/
 
 WORKDIR /app/local-docker-scheduler
 
-VOLUME ["/root/.docker", "/var/run/docker.sock", "/app/local-docker-scheduler/tracker_client_plugins.yaml"]
+VOLUME ["/root/.docker", "/var/run/docker.sock", "/app/local-docker-scheduler/tracker_client_plugins.yaml", "/app/local-docker-scheduler/database.config.yaml"]
 
 EXPOSE 5000
 
-# ENTRYPOINT ["python", "-m", "local_docker_scheduler", "-p 5000"]
+ENTRYPOINT ["python", "-m", "local_docker_scheduler", "-p 5000"]
 
 #CMD ["-H", "0.0.0.0"]
 
-ENTRYPOINT gunicorn --workers=1 -b 0.0.0.0:5000 local_docker_scheduler:"get_app()"
+#ENTRYPOINT gunicorn --workers=1 -b 0.0.0.0:5000 local_docker_scheduler:"get_app()"
