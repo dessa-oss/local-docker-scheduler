@@ -53,7 +53,7 @@ class DockerWorker:
             except FileNotFoundError as fe:
                 logging.error("NVIDIA container run-time not found")
                 logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} failed to start " + str(fe))
-                self.job['logs'] = str(fe)
+                self.job['logs'] = "Error: NVIDIA container run-time not found"
                 self.stop_job(timeout=0)
                 return
 
