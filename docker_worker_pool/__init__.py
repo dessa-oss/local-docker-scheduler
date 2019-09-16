@@ -46,6 +46,9 @@ class DockerWorker:
         lc = LogConfig(type=LogConfig.types.JSON, config={'max-size': '1g', 'labels': 'atlas_logging'})
         self.job['spec']['log_config'] = lc
 
+        if len(self.job['spec']['image'].split(':')) < 2:
+            self.job['spec']['image'] = self.job['spec']['image']+':latest'
+
         # if self.job['spec'].get('runtime') == 'nvidia':
         #     try:
         #         gpu_stats = subprocess.check_output(["nvidia-smi", "--format=csv",
