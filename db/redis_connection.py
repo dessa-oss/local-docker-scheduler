@@ -44,7 +44,7 @@ class RedisList:
         return self._redis.lset(self._key, index, dumps(value))
 
     def __delitem__(self, index):
-        return self._redis.lrem(self._key, 1, self[index])
+        return self._redis.lrem(self._key, 1, dumps(self.__getitem__(index)))
 
     def __contains__(self, value):
         print(f"looking up {value} in {self._key}")
@@ -55,7 +55,7 @@ class RedisList:
             return False
 
     def insert(self, index, value):
-        return self._redis.linsert(self._key, "before", self[index], dumps(value))
+        return self._redis.linsert(self._key, "before", dumps(self.__getitem__(index)), dumps(value))
 
     def append(self, value):
         return self._redis.rpush(self._key, dumps(value))
