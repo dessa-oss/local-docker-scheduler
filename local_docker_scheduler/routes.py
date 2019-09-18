@@ -36,7 +36,10 @@ def show_queued_job(position):
 
 @app.route('/queued_jobs/<int:position>', methods=['DELETE'])
 def delete_queued_job(position):
-    del queue[position]
+    try:
+        del queue[position]
+    except IndexError:
+        return f"Bad queue position {position}", 404
     return make_response(jsonify({}), 204)
 
 
@@ -53,7 +56,10 @@ def show_running_jobs():
 
 @app.route('/running_jobs/<string:job_id>', methods=['DELETE'])
 def delete_running_job(job_id):
-    docker_worker_pool.stop_job(job_id)
+    try:
+        docker_worker_pool.stop_job(job_id)
+    except IndexError:
+        return f"Bad job id {job_id}", 404
     return make_response(jsonify({}), 204)
 
 
@@ -134,7 +140,10 @@ def workers():
 
 @app.route('/workers/<int:worker_id>', methods=['DELETE'])
 def delete_worker(worker_id):
-    docker_worker_pool.delete_worker(worker_id)
+    try:
+        docker_worker_pool.delete_worker(worker_id)
+    except IndexError:
+        return f"Bad worker id {worker_id}", 404
     return make_response(jsonify({}), 204)
 
 @app.route('/jobs/<string:job_id>', methods=['GET'])
