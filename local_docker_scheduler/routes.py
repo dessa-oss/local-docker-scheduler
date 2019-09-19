@@ -45,9 +45,9 @@ def show_queued_job(position):
 def delete_queued_job(position):
     # need to make thread safe
     try:
-        job_id = queue[position]['job_id']
+        job = queue[position]
         del queue[position]
-        tracker_clients.delete(job_id)
+        tracker_clients.delete(job)
     except IndexError:
         return f"Bad queue position {position}", 404
     return make_response(jsonify({}), 204)
