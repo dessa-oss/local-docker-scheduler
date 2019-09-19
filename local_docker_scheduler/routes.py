@@ -25,7 +25,7 @@ def show_home_page():
 @app.route('/queued_jobs', methods=['GET', 'POST'])
 def queued_jobs():
     if request.method == 'POST':
-        job_id = request.json.get('job_id', uuid4().hex)
+        job_id = request.json.get('job_id', str(uuid4()))
         queue.append({'queued_time': time(),
                       'job_id': job_id,
                       'spec': request.json['spec'],
