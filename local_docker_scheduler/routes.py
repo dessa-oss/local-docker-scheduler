@@ -73,6 +73,27 @@ def delete_running_job(job_id):
     return make_response(jsonify({}), 204)
 
 
+@app.route('/completed_jobs/<string:job_id>', methods=['DELETE'])
+def delete_completed_job(job_id):
+    return _delete_job(job_id)
+
+
+def _delete_job(job_id):
+    job = None
+    try:
+        if job_id in failed_jobs:
+            job = failed_jobs[job_id]
+            del failed_jobs[job_id]
+        elif job_id in completed_jobs:
+            job = completed_jobs[job_id]
+            del completed_jobs[job_id]
+        tracker_clients.delete(job)
+
+        return make_response(jsonify({}), 204)
+    except IndexError:
+        return f"Job {job_id} not found", 404
+
+
 @app.route('/running_jobs/<string:job_id>/logs', methods=['GET'])
 def show_logs_running_jobs(job_id):
     worker = docker_worker_pool.worker_by_job_id(job_id)
