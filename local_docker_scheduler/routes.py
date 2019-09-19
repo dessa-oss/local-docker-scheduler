@@ -43,8 +43,11 @@ def show_queued_job(position):
 
 @app.route('/queued_jobs/<int:position>', methods=['DELETE'])
 def delete_queued_job(position):
+    # need to make thread safe
     try:
+        job_id = queue[position]['job_id']
         del queue[position]
+        tracker_clients.delete(job_id)
     except IndexError:
         return f"Bad queue position {position}", 404
     return make_response(jsonify({}), 204)
