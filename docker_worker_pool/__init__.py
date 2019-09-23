@@ -108,6 +108,7 @@ class DockerWorker:
             del running_jobs[self.job['job_id']]
             self._job = None
             self._container = None
+            self._container.cleanup()
 
     def stop_job(self, reschedule=False, timeout=5):
         if reschedule:
@@ -164,6 +165,13 @@ class DockerWorker:
             self.run_job(job)
         except IndexError:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
+
+    def cleanup(self):
+        try:
+            self._container.remove()
+        except docker.errors.APIError as ex:
+            logging.error(f"Could not remove container {self._container.id}")
+            logging.error(str(ex))
 
 
 def add():
