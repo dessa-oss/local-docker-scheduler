@@ -12,6 +12,7 @@ from time import time
 
 import docker
 from docker.types import LogConfig
+from docker.errors import APIError
 
 from db import queue, running_jobs, completed_jobs, failed_jobs
 from local_docker_scheduler import get_app
@@ -43,6 +44,14 @@ class DockerWorker:
     def job(self):
         return self._job
 
+    def create_volume(self, **kwargs):
+        self._client.volumes.create(**kwargs)
+
+    def create_volumes(self):
+        named_volumes = self.job['volumes']
+        for volume in named_volumes:
+            self.create_volume(**volume)
+
     def run_job(self, job):
         import subprocess
         self._job = job
@@ -68,10 +77,17 @@ class DockerWorker:
         #         self.stop_job(timeout=0)
         #         return
 
+        self.job['spec']['volumes'][self.job['job_id']] = '/workdir'
+
         try:
             self.job['start_time'] = time()
+            self.create_workdir()
             self._container = self._client.containers.run(**self.job['spec'])
             logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} started")
+
+        except APIError as e:
+            logging.error(f"Could not create working directory for job {self.job['job_id']}")
+            raise Exception
 
         except Exception as e:
             logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} failed to start " + str(e))
@@ -170,7 +186,7 @@ class DockerWorker:
     def cleanup_job(self):
         try:
             self._container.remove()
-        except docker.errors.APIError as ex:
+        except APIError as ex:
             logging.error(f"Could not remove container {self._container.id}")
             logging.error(str(ex))
 
