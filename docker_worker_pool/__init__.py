@@ -105,10 +105,11 @@ class DockerWorker:
                 failed_jobs[self.job['job_id']] = self.job
                 tracker_clients.failed(self.job)
         finally:
+            self._container.cleanup()
             del running_jobs[self.job['job_id']]
             self._job = None
             self._container = None
-            self._container.cleanup()
+
 
     def stop_job(self, reschedule=False, timeout=5):
         if reschedule:
