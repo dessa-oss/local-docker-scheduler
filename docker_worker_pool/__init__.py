@@ -174,7 +174,13 @@ class DockerWorker:
         if "cleanup_spec" in self.job:
             self.job['cleanup_spec']['detach'] = False
             self.job['cleanup_spec']['auto_remove'] = True
-            self._client.containers.run(**self.job['cleanup_spec'])
+
+            try:
+                self._client.containers.run(**self.job['cleanup_spec'])
+            except APIError as e:
+                logging.error(f"Could not cleanup working directory for job {self.job['job_id']}")
+                logging.error(f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{self.job['job_id']}")
+                pass
 
 
 def add():
