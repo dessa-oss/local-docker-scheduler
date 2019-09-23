@@ -173,7 +173,7 @@ class DockerWorker:
 
         if "cleanup_spec" in self.job:
             self.job['cleanup_spec']['detach'] = False
-            # self.job['cleanup_spec']['auto_remove'] = True
+            self.job['cleanup_spec']['auto_remove'] = True
             self._client.containers.run(**self.job['cleanup_spec'])
 
 
