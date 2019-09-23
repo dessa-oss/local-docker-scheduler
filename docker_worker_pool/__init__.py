@@ -66,22 +66,10 @@ class DockerWorker:
         if len(self.job['spec']['image'].split(':')) < 2:
             self.job['spec']['image'] = self.job['spec']['image']+':latest'
 
-        # if self.job['spec'].get('runtime') == 'nvidia':
-        #     try:
-        #         gpu_stats = subprocess.check_output(["nvidia-smi", "--format=csv",
-        #                                              "--query-gpu=memory.used,memory.free"])
-        #     except FileNotFoundError as fe:
-        #         logging.error("NVIDIA container run-time not found")
-        #         logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} failed to start " + str(fe))
-        #         self.job['logs'] = "Error: NVIDIA container run-time not found"
-        #         self.stop_job(timeout=0)
-        #         return
-
-        self.job['spec']['volumes'][self.job['job_id']] = '/workdir'
+        self.create_volumes()
 
         try:
             self.job['start_time'] = time()
-            self.create_workdir()
             self._container = self._client.containers.run(**self.job['spec'])
             logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} started")
 
@@ -185,7 +173,7 @@ class DockerWorker:
 
     def cleanup_job(self):
         try:
-            self._container.remove()
+            self._container.remove(v=True)
         except APIError as ex:
             logging.error(f"Could not remove container {self._container.id}")
             logging.error(str(ex))
