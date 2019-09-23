@@ -29,7 +29,8 @@ def queued_jobs():
         queue.append({'queued_time': time(),
                       'job_id': job_id,
                       'spec': request.json['spec'],
-                      'metadata': request.json.get('metadata', {})})
+                      'metadata': request.json.get('metadata', {}),
+                      'cleanup_spec': request.json['cleanup_spec']})
         tracker_clients.queued(queue[-1])
         return make_response(jsonify(job_id), 201)
     else:

@@ -44,14 +44,6 @@ class DockerWorker:
     def job(self):
         return self._job
 
-    def create_volume(self, **kwargs):
-        self._client.volumes.create(**kwargs)
-
-    def create_volumes(self):
-        named_volumes = self.job['volumes']
-        for volume in named_volumes:
-            self.create_volume(**volume)
-
     def run_job(self, job):
         import subprocess
         self._job = job
@@ -65,8 +57,6 @@ class DockerWorker:
 
         if len(self.job['spec']['image'].split(':')) < 2:
             self.job['spec']['image'] = self.job['spec']['image']+':latest'
-
-        self.create_volumes()
 
         try:
             self.job['start_time'] = time()
@@ -172,11 +162,19 @@ class DockerWorker:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
 
     def cleanup_job(self):
+
         try:
+            logging.info("Removing container...")
             self._container.remove(v=True)
+            logging.info("Container removed!")
         except APIError as ex:
             logging.error(f"Could not remove container {self._container.id}")
             logging.error(str(ex))
+
+        if "cleanup_spec" in self.job:
+            self.job['cleanup_spec']['detach'] = False
+            # self.job['cleanup_spec']['auto_remove'] = True
+            self._client.containers.run(**self.job['cleanup_spec'])
 
 
 def add():
