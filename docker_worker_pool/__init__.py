@@ -105,7 +105,7 @@ class DockerWorker:
                 failed_jobs[self.job['job_id']] = self.job
                 tracker_clients.failed(self.job)
         finally:
-            self._container.cleanup()
+            self.cleanup_job()
             del running_jobs[self.job['job_id']]
             self._job = None
             self._container = None
@@ -167,7 +167,7 @@ class DockerWorker:
         except IndexError:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
 
-    def cleanup(self):
+    def cleanup_job(self):
         try:
             self._container.remove()
         except docker.errors.APIError as ex:
