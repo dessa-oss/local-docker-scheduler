@@ -98,7 +98,7 @@ class DockerWorker:
             self.cleanup_job()
 
         finally:
-            # self.cleanup_job()
+
             del running_jobs[self.job['job_id']]
             self._job = None
             self._container = None
@@ -125,6 +125,7 @@ class DockerWorker:
         except TypeError:
             pass
 
+        self.cleanup_job()
         self._job = None
         self._container = None
 
