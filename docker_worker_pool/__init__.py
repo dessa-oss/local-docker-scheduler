@@ -63,10 +63,6 @@ class DockerWorker:
             self._container = self._client.containers.run(**self.job['spec'])
             logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} started")
 
-        except APIError as e:
-            logging.error(f"Could not create working directory for job {self.job['job_id']}")
-            raise Exception
-
         except Exception as e:
             logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} failed to start " + str(e))
             self.job['logs'] = str(e)
