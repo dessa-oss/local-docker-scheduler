@@ -14,7 +14,7 @@ import docker
 from docker.types import LogConfig
 from docker.errors import APIError
 
-from db import queue, running_jobs, completed_jobs, failed_jobs
+from db import queue, running_jobs, completed_jobs, failed_jobs, peak_lock, gpu_pool
 from local_docker_scheduler import get_app
 from tracker_client_plugins import tracker_clients
 
@@ -44,7 +44,7 @@ class DockerWorker:
     def job(self):
         return self._job
 
-    def run_job(self, job):
+    def run_job(self, job, gpu_ids=None):
         import subprocess
         self._job = job
 
@@ -57,6 +57,9 @@ class DockerWorker:
 
         if len(self.job['spec']['image'].split(':')) < 2:
             self.job['spec']['image'] = self.job['spec']['image']+':latest'
+
+        if gpu_ids:
+            self.job['spec']['environment'] = {'NVIDIA_VISIBLE_DEVICES': ','.join(gpu_ids)}
 
         try:
             self.job['start_time'] = time()
@@ -98,8 +101,9 @@ class DockerWorker:
             self.cleanup_job()
 
         finally:
-
             del running_jobs[self.job['job_id']]
+            if gpu_ids:
+                self._unlock_gpus(gpu_ids)
             self._job = None
             self._container = None
 
@@ -152,14 +156,62 @@ class DockerWorker:
         else:
             return None
 
+    def _get_available_gpus(self):
+        return [key for key, value in gpu_pool.items() if value == "unlocked"]
+
+    def _gpu_availability_is_sufficient(self, num_required, num_available):
+        if num_required > num_available:
+            return False
+        return True
+
+    def _lock_gpus(self, num_required, available_ids):
+        locked_gpus = []
+        for i in range(num_required):
+            gpu_pool[available_ids[i]] = "locked"
+            locked_gpus.append(available_ids[i])
+        return locked_gpus
+
+    def _unlock_gpus(self, ids_to_unlock):
+        for gpu_id in ids_to_unlock:
+            gpu_pool[gpu_id] = "unlocked"
+
+    def peak_queue(self):
+        logging.debug(f"[Worker {self._worker_id}] - peaking")
+
+        job = None
+        gpu_ids_for_job = None
+        peak_lock.acquire()
+        try:
+            peak_job = queue.peak()
+            num_gpus = peak_job["spec"]["num_gpus"]
+            if num_gpus > 0:
+                available_gpu_ids = self._get_available_gpus()
+                if not self._gpu_availability_is_sufficient(num_gpus, len(available_gpu_ids)):
+                    raise ResourceWarning
+                gpu_ids_for_job = self._lock_gpus(num_gpus, available_gpu_ids)
+        except IndexError:
+            logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
+        except ResourceWarning:
+            logging.info(f"[Worker {self._worker_id}] - not enough GPUs available for job, waiting for free resources")
+        else:
+            job = self.poll_queue()
+        finally:
+            peak_lock.release()
+            try:
+                if job:
+                    self.run_job(job, gpu_ids_for_job)
+            finally:
+                self._unlock_gpus(gpu_ids_for_job)
+
     def poll_queue(self):
         logging.debug(f"[Worker {self._worker_id}] - polling")
 
         try:
             job = copy.deepcopy(queue.pop(0))
-            self.run_job(job)
+            return job
         except IndexError:
-            logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
+            logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started") # change message
+            return None
 
     def cleanup_job(self):
 
