@@ -25,13 +25,21 @@ def show_home_page():
 @app.route('/queued_jobs', methods=['GET', 'POST'])
 def queued_jobs():
     if request.method == 'POST':
-        job_id = request.json.get('job_id', str(uuid4()))
-        queue.append({'queued_time': time(),
-                      'job_id': job_id,
-                      'spec': request.json['spec'],
-                      'metadata': request.json.get('metadata', {}),
-                      'cleanup_spec': request.json.get('cleanup_spec', {})})
+        job = request.json
+        try:
+            job_id = job.get('job_id', str(uuid4()))
+        except AttributeError:
+            return "Job must contain json payload", 400
+        try:
+            queue.append({'queued_time': time(),
+                          'job_id': job_id,
+                          'spec': job['spec'],
+                          'metadata': job.get('metadata', {}),
+                          'cleanup_spec': job.get('cleanup_spec', {})})
+        except KeyError:
+            return "Bad job spec", 400
         tracker_clients.queued(queue[-1])
+
         return make_response(jsonify(job_id), 201)
     else:
         return jsonify({i: {**val, 'position': i} for i, val in enumerate(queue)})
