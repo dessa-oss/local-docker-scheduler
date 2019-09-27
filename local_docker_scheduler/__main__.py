@@ -6,9 +6,11 @@ Written by Eric lee <e.lee@dessa.com>, 08 2019
 """
 
 from local_docker_scheduler import get_app
+from db import gpu_pool
 import logging
 import argparse
 import sys
+import os
 
 
 def get_args():
@@ -25,4 +27,8 @@ if __name__ == '__main__':
 
     args = get_args()
 
-    get_app(1).run(use_reloader=False, host=args.host, port=args.port, debug=args.debug, threaded=False)
+    gpu_pool = {k: "unlocked" for k in os.environ["CUDA_VISIBLE_DEVICES"].split(",")}
+
+    num_workers = os.environ.get("NUM_WORKERS", 1)
+
+    get_app(num_workers).run(use_reloader=False, host=args.host, port=args.port, debug=args.debug, threaded=False)
