@@ -25,4 +25,4 @@ failed_jobs = _db_class(database_dict['failed_jobs']['type'])(**database_dict['f
 completed_jobs = _db_class(database_dict['completed_jobs']['type'])(**database_dict['completed_jobs']['args'])
 running_jobs = _db_class(database_dict['running_jobs']['type'])(**database_dict['running_jobs']['args'])
 queue = _db_class(database_dict['queue']['type'])(**database_dict['queue']['args'])
-gpu_pool = {}  # TODO: This is currently thread safe based on the implementation of the pewk queue and where it is being used, but NOT thread safe if anyone else touched it directly
+gpu_pool = None  # TODO: This is currently thread safe based on the implementation of the peek queue and where it is being used, but NOT thread safe if anyone else touched it directly

@@ -27,10 +27,17 @@ if __name__ == '__main__':
 
     args = get_args()
 
-    print(f"***ENV: {os.environ}")
+    logging.info(f"***ENV: {os.environ}")
     if os.environ.get("CUDA_VISIBLE_DEVICES", None):
-        gpu_pool = {k: "unlocked" for k in os.environ["CUDA_VISIBLE_DEVICES"].split(",")}
+        logging.info(f"*** GPU_POOL 1: {gpu_pool}")
+        gpu_pool["0"] = "unlocked"
+        gpu_pool["1"] = "unlocked"
+        gpu_pool["2"] = "unlocked"
+        gpu_pool["3"] = "unlocked"
+        # gpu_pool = {k: "unlocked" for k in os.environ["CUDA_VISIBLE_DEVICES"].split(",")}
+        logging.info(f"*** GPU_POOL 2: {gpu_pool}")
 
     num_workers = os.environ.get("NUM_WORKERS", 1)
+    logging.info(f"*** GPU_POOL 3: {gpu_pool}")
 
     get_app(num_workers).run(use_reloader=False, host=args.host, port=args.port, debug=args.debug, threaded=False)
