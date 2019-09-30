@@ -30,11 +30,7 @@ if __name__ == '__main__':
     logging.info(f"***ENV: {os.environ}")
     if os.environ.get("CUDA_VISIBLE_DEVICES", None):
         logging.info(f"*** GPU_POOL 1: {gpu_pool}")
-        gpu_pool["0"] = "unlocked"
-        gpu_pool["1"] = "unlocked"
-        gpu_pool["2"] = "unlocked"
-        gpu_pool["3"] = "unlocked"
-        # gpu_pool = {k: "unlocked" for k in os.environ["CUDA_VISIBLE_DEVICES"].split(",")}
+        gpu_pool.update({k: "unlocked" for k in os.environ["CUDA_VISIBLE_DEVICES"].split(",")})
         logging.info(f"*** GPU_POOL 2: {gpu_pool}")
 
     num_workers = os.environ.get("NUM_WORKERS", 1)

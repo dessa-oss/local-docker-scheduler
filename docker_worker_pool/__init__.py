@@ -61,7 +61,7 @@ class DockerWorker:
         logging.info(f"*** {self.job['spec']}")
         if gpu_ids:
             if len(gpu_ids) > 0:
-                self.job['spec']['environment'].append(f'NVIDIA_VISIBLE_DEVICES={",".join(gpu_ids)}')
+                self.job['spec']['environment']["NVIDIA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
 
         try:
             self.job['start_time'] = time()
