@@ -108,7 +108,6 @@ class DockerWorker:
             self._job = None
             self._container = None
 
-
     def stop_job(self, reschedule=False, timeout=5):
         if reschedule:
             try:
@@ -216,7 +215,7 @@ class DockerWorker:
             return None
 
     def cleanup_job(self):
-
+        from shutil import rmtree
         try:
             logging.info("Removing container...")
             self._container.remove(v=True)
@@ -225,16 +224,12 @@ class DockerWorker:
             logging.error(f"Could not remove container {self._container.id}")
             logging.error(str(ex))
 
-        if "cleanup_spec" in self.job:
-            self.job['cleanup_spec']['detach'] = False
-            self.job['cleanup_spec']['auto_remove'] = True
-
-            try:
-                self._client.containers.run(**self.job['cleanup_spec'])
-            except APIError as e:
-                logging.error(f"Could not cleanup working directory for job {self.job['job_id']}")
-                logging.error(f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{self.job['job_id']}")
-                pass
+        try:
+            rmtree('/working_dir/'+self.job['job_id'])
+        except FileNotFoundError:
+            logging.error(f"Could not cleanup working directory for job {self.job['job_id']}")
+            logging.error(
+                f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{self.job['job_id']}")
 
 
 def add():
@@ -272,5 +267,24 @@ def stop_job(job_id, reschedule=False):
         worker.stop_job(reschedule)
 
 
+def delete_archive(job_id):
+    from shutil import rmtree
+    from uuid import UUID
+
+    try:
+        uuid_obj = UUID(job_id, version=4)
+    except ValueError:
+        logging.error("A valid job UUID was not provided")
+        raise IndexError
+
+    try:
+        rmtree('/archives/archive/'+job_id)
+        logging.info(f"Successfully deleted archive for Job {job_id}")
+    except FileNotFoundError:
+        logging.error(f"Could not delete archive for Job {job_id}")
+        logging.error(f"Please delete archive manually from ~/.foundations/job_data/")
+        raise IndexError
+
+
 def worker_job(worker_id):
-    _workers[worker_id].peek_queue()
+    _workers[worker_id].poll_queue()
