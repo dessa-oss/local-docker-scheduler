@@ -89,6 +89,7 @@ def _delete_job(job_id):
             job = completed_jobs[job_id]
             del completed_jobs[job_id]
         tracker_clients.delete(job)
+        docker_worker_pool.delete_archive(job_id)
 
         return make_response(jsonify({}), 204)
     except IndexError:
