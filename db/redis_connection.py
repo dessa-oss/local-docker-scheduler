@@ -67,7 +67,7 @@ class RedisList:
     def append(self, value):
         return self._redis.rpush(self._key, dumps(value))
 
-    def peak(self, index=0):
+    def peek(self, index=0):
         response = self._redis.lrange(self._key, index, index)
         if response is None:
             raise IndexError

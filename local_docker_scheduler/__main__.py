@@ -27,7 +27,8 @@ if __name__ == '__main__':
 
     args = get_args()
 
-    gpu_pool = {k: "unlocked" for k in os.environ["CUDA_VISIBLE_DEVICES"].split(",")}
+    if os.environ.get("CUDA_VISIBLE_DEVICES", None):
+        gpu_pool = {k: "unlocked" for k in os.environ["CUDA_VISIBLE_DEVICES"].split(",")}
 
     num_workers = os.environ.get("NUM_WORKERS", 1)
 

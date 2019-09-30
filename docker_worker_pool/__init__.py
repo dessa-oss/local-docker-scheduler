@@ -14,7 +14,7 @@ import docker
 from docker.types import LogConfig
 from docker.errors import APIError
 
-from db import queue, running_jobs, completed_jobs, failed_jobs, peak_lock, gpu_pool
+from db import queue, running_jobs, completed_jobs, failed_jobs, peek_lock, gpu_pool
 from local_docker_scheduler import get_app
 from tracker_client_plugins import tracker_clients
 
@@ -58,7 +58,7 @@ class DockerWorker:
         if len(self.job['spec']['image'].split(':')) < 2:
             self.job['spec']['image'] = self.job['spec']['image']+':latest'
 
-        if gpu_ids:
+        if len(gpu_ids) > 0:
             self.job['spec']['environment'] = {'NVIDIA_VISIBLE_DEVICES': ','.join(gpu_ids)}
 
         try:
@@ -175,15 +175,15 @@ class DockerWorker:
         for gpu_id in ids_to_unlock:
             gpu_pool[gpu_id] = "unlocked"
 
-    def peak_queue(self):
-        logging.debug(f"[Worker {self._worker_id}] - peaking")
+    def peek_queue(self):
+        logging.debug(f"[Worker {self._worker_id}] - peeking")
 
         job = None
         gpu_ids_for_job = None
-        peak_lock.acquire()
+        peek_lock.acquire()
         try:
-            peak_job = queue.peak()
-            num_gpus = peak_job["spec"]["num_gpus"]
+            peek_job = queue.peek()
+            num_gpus = peek_job["spec"]["num_gpus"]
             if num_gpus > 0:
                 available_gpu_ids = self._get_available_gpus()
                 if not self._gpu_availability_is_sufficient(num_gpus, len(available_gpu_ids)):
@@ -196,7 +196,7 @@ class DockerWorker:
         else:
             job = self.poll_queue()
         finally:
-            peak_lock.release()
+            peek_lock.release()
             try:
                 if job:
                     self.run_job(job, gpu_ids_for_job)
