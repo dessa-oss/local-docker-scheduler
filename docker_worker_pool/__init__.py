@@ -58,8 +58,9 @@ class DockerWorker:
         if len(self.job['spec']['image'].split(':')) < 2:
             self.job['spec']['image'] = self.job['spec']['image']+':latest'
 
-        if len(gpu_ids) > 0:
-            self.job['spec']['environment'] = {'NVIDIA_VISIBLE_DEVICES': ','.join(gpu_ids)}
+        if gpu_ids:
+            if len(gpu_ids) > 0:
+                self.job['spec']['environment'] = {'NVIDIA_VISIBLE_DEVICES': ','.join(gpu_ids)}
 
         try:
             self.job['start_time'] = time()
