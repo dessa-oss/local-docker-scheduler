@@ -19,7 +19,6 @@ def get_app(num_workers=1):
 
     from tracker_client_plugins import tracker_clients
     import docker_worker_pool
-    from local_docker_scheduler import routes
 
     global _app
     if _app is not None:
