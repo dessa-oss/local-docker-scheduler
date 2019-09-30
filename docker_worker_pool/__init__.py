@@ -58,6 +58,7 @@ class DockerWorker:
         if len(self.job['spec']['image'].split(':')) < 2:
             self.job['spec']['image'] = self.job['spec']['image']+':latest'
 
+        logging.info(f"*** {self.job['spec']}")
         if gpu_ids:
             if len(gpu_ids) > 0:
                 self.job['spec']['environment'].append(f'NVIDIA_VISIBLE_DEVICES={",".join(gpu_ids)}')
@@ -184,7 +185,10 @@ class DockerWorker:
         peek_lock.acquire()
         try:
             peek_job = queue.peek()
+            logging.info(f"***Peek job: {peek_job}")
             num_gpus = peek_job.get("gpu_spec", {}).get("num_gpus", 0)
+            logging.info(f"***Num GPUs: {num_gpus}")
+            logging.info(f"***GPU pool: {gpu_pool}")
             if num_gpus > 0:
                 available_gpu_ids = self._get_available_gpus()
                 if not self._gpu_availability_is_sufficient(num_gpus, len(available_gpu_ids)):

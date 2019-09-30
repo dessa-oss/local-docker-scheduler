@@ -35,7 +35,7 @@ def queued_jobs():
                           'job_id': job_id,
                           'spec': job['spec'],
                           'metadata': job.get('metadata', {}),
-                          'cleanup_spec': job.get('cleanup_spec', {})})
+                          'gpu_spec': job.get('gpu_spec', {})})
         except KeyError:
             return "Bad job spec", 400
         tracker_clients.queued(queue[-1])

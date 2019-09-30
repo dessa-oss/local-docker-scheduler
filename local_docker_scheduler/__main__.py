@@ -27,6 +27,7 @@ if __name__ == '__main__':
 
     args = get_args()
 
+    print(f"***ENV: {os.environ}")
     if os.environ.get("CUDA_VISIBLE_DEVICES", None):
         gpu_pool = {k: "unlocked" for k in os.environ["CUDA_VISIBLE_DEVICES"].split(",")}
 
