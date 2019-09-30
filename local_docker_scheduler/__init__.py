@@ -5,6 +5,7 @@ Proprietary and confidential
 Written by Eric lee <e.lee@dessa.com>, 08 2019
 """
 
+import logging
 
 _app = None
 
@@ -43,7 +44,7 @@ def get_app(num_workers=1):
     except FileNotFoundError:
         pass
 
-    print("*$*" + str(num_workers))
+    logging.info("*$*" + str(num_workers))
     for i in range(num_workers):
         docker_worker_pool.add()
 
