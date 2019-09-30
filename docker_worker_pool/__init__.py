@@ -60,7 +60,7 @@ class DockerWorker:
 
         if gpu_ids:
             if len(gpu_ids) > 0:
-                self.job['spec']['environment'] = {'NVIDIA_VISIBLE_DEVICES': ','.join(gpu_ids)}
+                self.job['spec']['environment'].append(f'NVIDIA_VISIBLE_DEVICES={",".join(gpu_ids)}')
 
         try:
             self.job['start_time'] = time()
@@ -184,7 +184,7 @@ class DockerWorker:
         peek_lock.acquire()
         try:
             peek_job = queue.peek()
-            num_gpus = peek_job["spec"].get("num_gpus", 0)
+            num_gpus = peek_job.get("gpu_spec", {}).get("num_gpus", 0)
             if num_gpus > 0:
                 available_gpu_ids = self._get_available_gpus()
                 if not self._gpu_availability_is_sufficient(num_gpus, len(available_gpu_ids)):
@@ -287,4 +287,4 @@ def delete_archive(job_id):
 
 
 def worker_job(worker_id):
-    _workers[worker_id].poll_queue()
+    _workers[worker_id].peek_queue()
