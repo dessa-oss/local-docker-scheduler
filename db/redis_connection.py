@@ -67,7 +67,7 @@ class RedisList:
     def append(self, value):
         return self._redis.rpush(self._key, dumps(value))
 
-    def peak(self, index=0):
+    def peek(self, index=0):
         return self.__getitem__(index)
 
     def pop(self, index=-1):

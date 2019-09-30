@@ -172,8 +172,9 @@ class DockerWorker:
         return locked_gpus
 
     def _unlock_gpus(self, ids_to_unlock):
-        for gpu_id in ids_to_unlock:
-            gpu_pool[gpu_id] = "unlocked"
+        if ids_to_unlock:
+            for gpu_id in ids_to_unlock:
+                gpu_pool[gpu_id] = "unlocked"
 
     def peek_queue(self):
         logging.debug(f"[Worker {self._worker_id}] - peeking")
@@ -183,7 +184,7 @@ class DockerWorker:
         peek_lock.acquire()
         try:
             peek_job = queue.peek()
-            num_gpus = peek_job["spec"]["num_gpus"]
+            num_gpus = peek_job["spec"].get("num_gpus", 0)
             if num_gpus > 0:
                 available_gpu_ids = self._get_available_gpus()
                 if not self._gpu_availability_is_sufficient(num_gpus, len(available_gpu_ids)):
@@ -194,7 +195,7 @@ class DockerWorker:
         except ResourceWarning:
             logging.info(f"[Worker {self._worker_id}] - not enough GPUs available for job, waiting for free resources")
         else:
-            job = self.poll_queue()
+            job = self._poll_queue()
         finally:
             peek_lock.release()
             try:
@@ -203,7 +204,7 @@ class DockerWorker:
             finally:
                 self._unlock_gpus(gpu_ids_for_job)
 
-    def poll_queue(self):
+    def _poll_queue(self):
         logging.debug(f"[Worker {self._worker_id}] - polling")
 
         try:
@@ -271,4 +272,4 @@ def stop_job(job_id, reschedule=False):
 
 
 def worker_job(worker_id):
-    _workers[worker_id].poll_queue()
+    _workers[worker_id].peek_queue()
