@@ -246,7 +246,11 @@ def add():
                                   seconds=_interval,
                                   args=[worker_id],
                                   id=str(worker_id))
+    logging.info(f"**** {worker_id}")
+    logging.info(f"**** {id(job)}")
     _workers[worker_id] = DockerWorker(worker_id, job)
+    logging.info(f"**** {_workers}")
+    logging.info(f"**** {get_app().apscheduler.get_jobs()}")
     return str(worker_id)
 
 
