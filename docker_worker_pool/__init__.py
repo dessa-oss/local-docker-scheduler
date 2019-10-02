@@ -189,15 +189,27 @@ class DockerWorker:
             num_gpus = peek_job.get("gpu_spec", {}).get("num_gpus", 0)
             logging.info(f"***Num GPUs: {num_gpus}")
             logging.info(f"***GPU pool: {gpu_pool}")
-            if num_gpus > 0:
+            if num_gpus > len(gpu_pool):
+                self._job = self._poll_queue()
+                error_message = f"[Worker {self._worker_id}] - job {peek_job['job_id']} is expecting to use more GPUs ({num_gpus}) than available ({len(gpu_pool)}), removing from the queue"
+                self.job['logs'] = str(error_message)
+                self.stop_job(timeout=0)
+                raise ResourceWarning(error_message)
+            elif num_gpus >= 0:
                 available_gpu_ids = self._get_available_gpus()
                 if not self._gpu_availability_is_sufficient(num_gpus, len(available_gpu_ids)):
-                    raise ResourceWarning
+                    raise ResourceWarning(f"[Worker {self._worker_id}] - not enough GPUs available for job, waiting for free resources")
                 gpu_ids_for_job = self._lock_gpus(num_gpus, available_gpu_ids)
+            else:
+                self._job = self._poll_queue()
+                error_message = f"[Worker {self._worker_id}] - job {peek_job['job_id']} expects an invalid number of GPUs ({num_gpus})"
+                self.job['logs'] = str(error_message)
+                self.stop_job(timeout=0)
+                raise ResourceWarning(error_message)
         except IndexError:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
-        except ResourceWarning:
-            logging.info(f"[Worker {self._worker_id}] - not enough GPUs available for job, waiting for free resources")
+        except ResourceWarning as error:
+            logging.info(error)
         else:
             job = self._poll_queue()
         finally:
