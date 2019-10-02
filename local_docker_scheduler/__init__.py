@@ -44,7 +44,6 @@ def get_app(num_workers=1):
     except FileNotFoundError:
         pass
 
-    logging.info("*$*" + str(num_workers))
     for i in range(num_workers):
         docker_worker_pool.add()
 

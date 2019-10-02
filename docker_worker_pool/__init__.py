@@ -58,7 +58,6 @@ class DockerWorker:
         if len(self.job['spec']['image'].split(':')) < 2:
             self.job['spec']['image'] = self.job['spec']['image']+':latest'
 
-        logging.info(f"*** {self.job['spec']}")
         if gpu_ids:
             if len(gpu_ids) > 0:
                 self.job['spec']['environment']["NVIDIA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
@@ -190,20 +189,17 @@ class DockerWorker:
         peek_lock.acquire()
         try:
             peek_job = queue.peek()
-            logging.info(f"***Peek job: {peek_job}")
             num_gpus = peek_job.get("gpu_spec", {}).get("num_gpus", 0)
-            logging.info(f"***Num GPUs: {num_gpus}")
-            logging.info(f"***GPU pool: {gpu_pool}")
 
             try:
                 num_gpus = int(num_gpus)
             except ValueError:
-                error_message = f"[Worker {self._worker_id}] - job {peek_job['job_id']} was given a value that could not be converted to an integer for GPUs usage ({num_gpus})"
+                error_message = f"Foundations ERROR: Job '{peek_job['job_id']}' was given a value that could not be converted to an integer for GPUs usage ({num_gpus})"
                 self._remove_job_from_queue_and_fail(error_message)
                 raise ResourceWarning(error_message)
 
             if num_gpus > len(gpu_pool):
-                error_message = f"[Worker {self._worker_id}] - job {peek_job['job_id']} expects to use more GPUs ({num_gpus}) than available ({len(gpu_pool)}), removing from the queue"
+                error_message = f"Foundations ERROR: Job '{peek_job['job_id']}' expects to use more GPUs ({num_gpus}) than available ({len(gpu_pool)}), removing from the queue"
                 self._remove_job_from_queue_and_fail(error_message)
                 raise ResourceWarning(error_message)
             elif num_gpus >= 0:
@@ -212,7 +208,7 @@ class DockerWorker:
                     raise ResourceWarning(f"[Worker {self._worker_id}] - not enough GPUs available for job, waiting for free resources")
                 gpu_ids_for_job = self._lock_gpus(num_gpus, available_gpu_ids)
             else:
-                error_message = f"[Worker {self._worker_id}] - job {peek_job['job_id']} expects an invalid number of GPUs ({num_gpus})"
+                error_message = f"Foundations ERROR: Job '{peek_job['job_id']}' expects an invalid number of GPUs ({num_gpus})"
                 self._remove_job_from_queue_and_fail(error_message)
                 raise ResourceWarning(error_message)
         except IndexError:
@@ -267,11 +263,7 @@ def add():
                                   seconds=_interval,
                                   args=[worker_id],
                                   id=str(worker_id))
-    logging.info(f"**** {worker_id}")
-    logging.info(f"**** {id(job)}")
     _workers[worker_id] = DockerWorker(worker_id, job)
-    logging.info(f"**** {_workers}")
-    logging.info(f"**** {get_app().apscheduler.get_jobs()}")
     return str(worker_id)
 
 
