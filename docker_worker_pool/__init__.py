@@ -177,6 +177,11 @@ class DockerWorker:
             for gpu_id in ids_to_unlock:
                 gpu_pool[gpu_id] = "unlocked"
 
+    def _remove_job_from_queue_and_fail(self, error_message):
+        self._job = self._poll_queue()
+        self.job['logs'] = str(error_message)
+        self.stop_job(timeout=0)
+
     def peek_queue(self):
         logging.debug(f"[Worker {self._worker_id}] - peeking")
 
@@ -189,11 +194,17 @@ class DockerWorker:
             num_gpus = peek_job.get("gpu_spec", {}).get("num_gpus", 0)
             logging.info(f"***Num GPUs: {num_gpus}")
             logging.info(f"***GPU pool: {gpu_pool}")
+
+            try:
+                num_gpus = int(num_gpus)
+            except ValueError:
+                error_message = f"[Worker {self._worker_id}] - job {peek_job['job_id']} was given a value that could not be converted to an integer for GPUs usage ({num_gpus})"
+                self._remove_job_from_queue_and_fail(error_message)
+                raise ResourceWarning(error_message)
+
             if num_gpus > len(gpu_pool):
-                self._job = self._poll_queue()
-                error_message = f"[Worker {self._worker_id}] - job {peek_job['job_id']} is expecting to use more GPUs ({num_gpus}) than available ({len(gpu_pool)}), removing from the queue"
-                self.job['logs'] = str(error_message)
-                self.stop_job(timeout=0)
+                error_message = f"[Worker {self._worker_id}] - job {peek_job['job_id']} expects to use more GPUs ({num_gpus}) than available ({len(gpu_pool)}), removing from the queue"
+                self._remove_job_from_queue_and_fail(error_message)
                 raise ResourceWarning(error_message)
             elif num_gpus >= 0:
                 available_gpu_ids = self._get_available_gpus()
@@ -201,10 +212,8 @@ class DockerWorker:
                     raise ResourceWarning(f"[Worker {self._worker_id}] - not enough GPUs available for job, waiting for free resources")
                 gpu_ids_for_job = self._lock_gpus(num_gpus, available_gpu_ids)
             else:
-                self._job = self._poll_queue()
                 error_message = f"[Worker {self._worker_id}] - job {peek_job['job_id']} expects an invalid number of GPUs ({num_gpus})"
-                self.job['logs'] = str(error_message)
-                self.stop_job(timeout=0)
+                self._remove_job_from_queue_and_fail(error_message)
                 raise ResourceWarning(error_message)
         except IndexError:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started")
