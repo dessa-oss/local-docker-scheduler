@@ -30,6 +30,4 @@ if __name__ == '__main__':
     if os.environ.get("CUDA_VISIBLE_DEVICES", None):
         gpu_pool.update({k: "unlocked" for k in os.environ["CUDA_VISIBLE_DEVICES"].split(",")})
 
-    num_workers = int(os.environ.get("NUM_WORKERS", 1))
-
-    get_app(num_workers).run(use_reloader=False, host=args.host, port=args.port, debug=args.debug, threaded=False)
+    get_app().run(use_reloader=False, host=args.host, port=args.port, debug=args.debug, threaded=False)

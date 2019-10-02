@@ -10,8 +10,9 @@ import logging
 _app = None
 
 
-def get_app(num_workers=1):
+def get_app():
     import atexit
+    import os
 
     import yaml
     from flask import Flask
@@ -44,6 +45,7 @@ def get_app(num_workers=1):
     except FileNotFoundError:
         pass
 
+    num_workers = int(os.environ.get("NUM_WORKERS", 1))
     for i in range(num_workers):
         docker_worker_pool.add()
 
