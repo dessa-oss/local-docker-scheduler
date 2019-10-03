@@ -116,7 +116,11 @@ class DockerWorker:
                 pass
 
         if self._container:
-            self._container.stop(timeout=timeout)
+            try:
+                self._container.stop(timeout=timeout)
+            except Exception as e:
+                logging.error("Couldn't stop the container:")
+                logging.error(e)
 
         try:
             del running_jobs[self.job['job_id']]
