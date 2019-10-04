@@ -133,7 +133,6 @@ class DockerWorker:
         except TypeError:
             pass
 
-        self.cleanup_job()
         self._job = None
         self._container = None
 
@@ -239,8 +238,16 @@ class DockerWorker:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started") # change message
             return None
 
-    def cleanup_job(self):
+    def remove_working_directory(self):
         from shutil import rmtree
+        try:
+            rmtree('/working_dir/'+self.job['job_id'])
+        except FileNotFoundError:
+            logging.error(f"Could not cleanup working directory for job {self.job['job_id']}")
+            logging.error(
+                f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{self.job['job_id']}")
+
+    def cleanup_job(self):
         try:
             logging.info("Removing container...")
             self._container.remove(v=True)
@@ -249,12 +256,7 @@ class DockerWorker:
             logging.error(f"Could not remove container {self._container.id}")
             logging.error(str(ex))
 
-        try:
-            rmtree('/working_dir/'+self.job['job_id'])
-        except FileNotFoundError:
-            logging.error(f"Could not cleanup working directory for job {self.job['job_id']}")
-            logging.error(
-                f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{self.job['job_id']}")
+        self.remove_working_directory()
 
 
 def add():
