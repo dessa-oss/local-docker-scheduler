@@ -272,6 +272,16 @@ def worker_by_job_id(job_id):
         return None
 
 
+def remove_working_directory(job_id):
+    from shutil import rmtree
+    try:
+        rmtree('/working_dir/' + job_id)
+    except FileNotFoundError:
+        logging.error(f"Could not cleanup working directory for job {job_id}")
+        logging.error(
+            f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{job_id}")
+
+
 def stop_job(job_id, reschedule=False):
     worker = worker_by_job_id(job_id)
     if worker is None:
