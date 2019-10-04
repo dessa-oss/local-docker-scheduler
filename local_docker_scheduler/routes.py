@@ -55,9 +55,10 @@ def delete_queued_job(position):
     # need to make thread safe
     try:
         job = queue[position]
+        job_id = job["job_id"]
         del queue[position]
         tracker_clients.delete(job)
-        docker_worker_pool.remove_working_directory()
+        docker_worker_pool.remove_working_directory(job_id)
     except IndexError:
         return f"Bad queue position {position}", 404
     return make_response(jsonify({}), 204)
