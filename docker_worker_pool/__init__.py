@@ -122,21 +122,6 @@ class DockerWorker:
                 logging.error("Couldn't stop the container:")
                 logging.error(e)
 
-        try:
-            del running_jobs[self.job['job_id']]
-        except TypeError:
-            pass
-
-        try:
-            failed_jobs[self.job['job_id']] = self.job
-            tracker_clients.failed(self.job)
-        except TypeError:
-            pass
-
-        self.cleanup_job()
-        self._job = None
-        self._container = None
-
     def delete(self, reschedule):
         self.stop_job(reschedule)
         self._APSSchedulerJob.remove()

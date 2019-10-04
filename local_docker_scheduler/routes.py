@@ -57,6 +57,7 @@ def delete_queued_job(position):
         job = queue[position]
         del queue[position]
         tracker_clients.delete(job)
+        docker_worker_pool.cleanup_job()
     except IndexError:
         return f"Bad queue position {position}", 404
     return make_response(jsonify({}), 204)
