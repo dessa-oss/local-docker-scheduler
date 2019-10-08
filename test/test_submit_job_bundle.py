@@ -82,3 +82,31 @@ class TestSubmitJobBundle(unittest.TestCase):
 
         with open(f'working_dir/{self.job_id}/file_1', 'r') as file_1:
             self.assertEqual('goodbye world', file_1.read())
+
+    def test_submitting_job_bundle_with_no_files_returns_correct_error_and_status_code(self):
+        import os
+        import requests
+
+        response = requests.post('http://localhost:5000/job_bundle')
+        
+        self.assertEqual(400, response.status_code)
+        self.assertEqual('No files in request', response.text)
+
+    
+    def test_submitting_job_bundle_with_no_files_with_job_bundle_key_returns_correct_error_and_status_code(self):
+        import os
+        import requests
+
+        tarball_location = self._generate_tarball()
+
+        with open(tarball_location, 'rb') as tarball:
+            request_payload = {
+                'not_job_bundle': tarball
+            }
+
+            response = requests.post('http://localhost:5000/job_bundle', files=request_payload)
+        
+        os.remove(tarball_location)
+
+        self.assertEqual(400, response.status_code)
+        self.assertEqual('Job bundle not found in request', response.text)
