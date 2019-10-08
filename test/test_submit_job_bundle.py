@@ -110,3 +110,24 @@ class TestSubmitJobBundle(unittest.TestCase):
 
         self.assertEqual(400, response.status_code)
         self.assertEqual('Job bundle not found in request', response.text)
+
+    def test_submitting_job_bundle_with_wrong_file_type_returns_correct_error_and_status_code(self):
+        import os
+        import requests
+
+        tarball_location = 'some_file'
+
+        with open(tarball_location, 'w') as bad_file:
+            bad_file.write('hello world')
+
+        with open(tarball_location, 'rb') as tarball:
+            request_payload = {
+                'job_bundle': tarball
+            }
+
+            response = requests.post('http://localhost:5000/job_bundle', files=request_payload)
+        
+        os.remove(tarball_location)
+
+        self.assertEqual(400, response.status_code)
+        self.assertEqual('Invalid job bundle', response.text)

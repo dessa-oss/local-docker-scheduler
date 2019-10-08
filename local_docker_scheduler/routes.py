@@ -37,11 +37,14 @@ def save_job_bundle():
     tarball = f'/tmp/{secure_filename(bundle_file.filename)}.tgz'
     bundle_file.save(tarball)
 
-    with tarfile.open(tarball) as tar:
-        tar.extractall(path=_WORKING_DIR)
-
-    os.remove(tarball)
-    return "Job bundle uploaded", 200
+    try:
+        with tarfile.open(tarball) as tar:
+            tar.extractall(path=_WORKING_DIR)
+        return "Job bundle uploaded", 200
+    except tarfile.ReadError:
+        return 'Invalid job bundle', 400
+    finally:
+        os.remove(tarball)
 
 @app.route('/queued_jobs', methods=['GET', 'POST'])
 def queued_jobs():
