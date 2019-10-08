@@ -8,19 +8,40 @@ Written by Eric lee <e.lee@dessa.com>, 08 2019
 from local_docker_scheduler import get_app
 from db import queue, running_jobs, completed_jobs, failed_jobs
 from flask import jsonify, request, make_response
+import os
+import os.path as path
+import tarfile
 from time import time
 from uuid import uuid4
+from werkzeug.utils import secure_filename
 import docker_worker_pool
 import logging
 from tracker_client_plugins import tracker_clients
 
-
+_WORKING_DIR = os.environ.get('WORKING_DIR', '/working_dir')
 app = get_app()
 
 @app.route('/')
 def show_home_page():
     return "Welcome to docker scheduler"
 
+@app.route('/job_bundle', methods=['POST'])
+def save_job_bundle():
+    if not request.files:
+        return "No files in request", 400
+
+    if 'job_bundle' not in request.files:
+        return "Job bundle not found in request", 400
+
+    bundle_file = request.files['job_bundle']
+    tarball = f'/tmp/{secure_filename(bundle_file.filename)}.tgz'
+    bundle_file.save(tarball)
+
+    with tarfile.open(tarball) as tar:
+        tar.extractall(path=_WORKING_DIR)
+
+    os.remove(tarball)
+    return "Job bundle uploaded", 200
 
 @app.route('/queued_jobs', methods=['GET', 'POST'])
 def queued_jobs():

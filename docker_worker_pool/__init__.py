@@ -8,6 +8,7 @@ Written by Eric lee <e.lee@dessa.com>, 08 2019
 
 import logging
 import copy
+import os
 from time import time
 
 import docker
@@ -21,6 +22,8 @@ from tracker_client_plugins import tracker_clients
 
 _workers = {}
 _interval = 2
+
+_WORKING_DIR = os.environ.get('WORKING_DIR', '/working_dir')
 
 class DockerWorker:
     def __init__(self, worker_id, APSSchedulerJob):
@@ -250,7 +253,7 @@ class DockerWorker:
     def remove_working_directory(job_id):
         from shutil import rmtree
         try:
-            rmtree('/working_dir/'+job_id)
+            rmtree(f'{_WORKING_DIR}/'+job_id)
         except FileNotFoundError:
             logging.error(f"Could not cleanup working directory for job {job_id}")
             logging.error(
