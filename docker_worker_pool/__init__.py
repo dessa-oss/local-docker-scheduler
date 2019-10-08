@@ -14,7 +14,7 @@ import docker
 from docker.types import LogConfig
 from docker.errors import APIError
 
-from db import queue, running_jobs, completed_jobs, failed_jobs, peek_lock, gpu_pool
+from db import queue, running_jobs, completed_jobs, failed_jobs, peek_lock, gpu_pool, RLock
 from local_docker_scheduler import get_app
 from tracker_client_plugins import tracker_clients
 
@@ -29,6 +29,7 @@ class DockerWorker:
         self._job = None
         self._container = None
         self._client = docker.from_env()
+        self._lock = RLock()
 
     @property
     def status(self):
@@ -48,79 +49,100 @@ class DockerWorker:
         import subprocess
         self._job = job
 
-        running_jobs[self.job['job_id']] = self.job
+        job = self.job
+        job_id = job['job_id']
 
-        self.job['spec']['detach'] = True
+        running_jobs[job_id] = job
+
+        job['spec']['detach'] = True
 
         lc = LogConfig(type=LogConfig.types.JSON, config={'max-size': '1g', 'labels': 'atlas_logging'})
-        self.job['spec']['log_config'] = lc
+        job['spec']['log_config'] = lc
 
-        if len(self.job['spec']['image'].split(':')) < 2:
-            self.job['spec']['image'] = self.job['spec']['image']+':latest'
+        if len(job['spec']['image'].split(':')) < 2:
+            job['spec']['image'] = job['spec']['image']+':latest'
 
         if gpu_ids:
             if len(gpu_ids) > 0:
-                self.job['spec']['environment']["NVIDIA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
+                job['spec']['environment']["NVIDIA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
 
+        container = None
         try:
-            self.job['start_time'] = time()
-            self._container = self._client.containers.run(**self.job['spec'])
-            logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} started")
+            job['start_time'] = time()
+            self._container = self._client.containers.run(**job['spec'])
+            container = self._container
+            logging.info(f"[Worker {self._worker_id}] - Job {job_id} started")
 
         except Exception as e:
-            logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} failed to start " + str(e))
-            self.job['logs'] = str(e)
+            logging.info(f"[Worker {self._worker_id}] - Job {job_id} failed to start " + str(e))
+            job['logs'] = str(e)
             self.stop_job(timeout=0)
             return
 
-        tracker_clients.running(self.job)
+        tracker_clients.running(job)
 
         try:
-            return_code = self._container.wait()
-            self.job['logs'] = self._container.logs()
+            return_code = container.wait()
+            job['logs'] = container.logs()
             try:
-                self.job['logs'] = self.job['logs'].decode()
+                job['logs'] = job['logs'].decode()
             except (UnicodeDecodeError, AttributeError):
                 pass
         except Exception as e:
-            self.job['end_time'] = time()
-            logging.info(f"[Worker {self._worker_id}] - Worker {self._worker_id} failed to reconnect to job {self.job['job_id']}, killing job now")
+            job['end_time'] = time()
+            logging.info(f"[Worker {self._worker_id}] - Worker {self._worker_id} failed to reconnect to job {job_id}, killing job now")
 
             self.stop_job(timeout=0)
         else:
-            self.job['end_time'] = time()
-            self.job['return_code'] = return_code
-            logging.info(f"[Worker {self._worker_id}] - Job {self.job['job_id']} finished with return code {return_code}")
+            job['end_time'] = time()
+            job['return_code'] = return_code
+            logging.info(f"[Worker {self._worker_id}] - Job {job_id} finished with return code {return_code}")
 
             if not return_code['StatusCode']:
-                completed_jobs[self.job['job_id']] = self.job
-                tracker_clients.completed(self.job)
+                completed_jobs[job_id] = job
+                tracker_clients.completed(job)
             else:
-                failed_jobs[self.job['job_id']] = self.job
-                tracker_clients.failed(self.job)
+                failed_jobs[job_id] = job
+                tracker_clients.failed(job)
 
-            self.cleanup_job()
+            self._cleanup_job(container, job_id)
 
         finally:
-            del running_jobs[self.job['job_id']]
+            self._delete_running_job(job_id)
             if gpu_ids:
                 self._unlock_gpus(gpu_ids)
+
+    def _delete_running_job(self, job_id):
+        with self._lock:
             self._job = None
             self._container = None
+            if job_id in running_jobs:
+                del running_jobs[job_id]
 
     def stop_job(self, reschedule=False, timeout=5):
-        if reschedule:
+        job = self.job
+        job_id = job['job_id']
+        with self._lock:
+            if reschedule:
+                try:
+                    queue.insert(0, job['job_spec'])
+                except (KeyError, TypeError):
+                    pass
+
+            if self._container:
+                try:
+                    self._container.stop(timeout=timeout)
+                except Exception as e:
+                    logging.error("Couldn't stop the container:")
+                    logging.error(e)
+
             try:
-                queue.insert(0, self.job['job_spec'])
-            except (KeyError, TypeError):
+                failed_jobs[job_id] = job
+                tracker_clients.failed(job)
+            except TypeError:
                 pass
 
-        if self._container:
-            try:
-                self._container.stop(timeout=timeout)
-            except Exception as e:
-                logging.error("Couldn't stop the container:")
-                logging.error(e)
+        self._delete_running_job(job_id)
 
     def delete(self, reschedule):
         self.stop_job(reschedule)
@@ -224,25 +246,27 @@ class DockerWorker:
             logging.info(f"[Worker {self._worker_id}] - no jobs in queue, no jobs started") # change message
             return None
 
-    def remove_working_directory(self):
+    @staticmethod
+    def remove_working_directory(job_id):
         from shutil import rmtree
         try:
-            rmtree('/working_dir/'+self.job['job_id'])
+            rmtree('/working_dir/'+job_id)
         except FileNotFoundError:
-            logging.error(f"Could not cleanup working directory for job {self.job['job_id']}")
+            logging.error(f"Could not cleanup working directory for job {job_id}")
             logging.error(
-                f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{self.job['job_id']}")
+                f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{job_id}")
 
-    def cleanup_job(self):
+    @staticmethod
+    def _cleanup_job(container, job_id):
         try:
             logging.info("Removing container...")
-            self._container.remove(v=True)
+            container.remove(v=True)
             logging.info("Container removed!")
         except APIError as ex:
-            logging.error(f"Could not remove container {self._container.id}")
+            logging.error(f"Could not remove container {container.id}")
             logging.error(str(ex))
 
-        self.remove_working_directory()
+        DockerWorker.remove_working_directory(job_id)
 
 
 def add():
@@ -273,13 +297,7 @@ def worker_by_job_id(job_id):
 
 
 def remove_working_directory(job_id):
-    from shutil import rmtree
-    try:
-        rmtree('/working_dir/' + job_id)
-    except FileNotFoundError:
-        logging.error(f"Could not cleanup working directory for job {job_id}")
-        logging.error(
-            f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{job_id}")
+    return DockerWorker.remove_working_directory(job_id)
 
 
 def stop_job(job_id, reschedule=False):
