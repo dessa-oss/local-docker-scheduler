@@ -63,6 +63,9 @@ def scheduled_jobs():
         if len(schedule.items()) == 0:
             return "Invalid job schedule", 400
 
+        if not _job_directory_exists(job_id):
+            return 'Cannot schedule a job that has no uploaded bundle', 409
+
         scheduled_job = {'job_id': job_id,
                             'spec': spec,
                             'schedule': schedule,
@@ -77,6 +80,13 @@ def scheduled_jobs():
     else:
         current_scheduled_jobs = docker_worker_pool.get_cron_workers()
         return jsonify({worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values()})
+
+def _job_directory_exists(job_id):
+    import os
+
+    if job_id in os.listdir(_WORKING_DIR):
+        return True
+    return False
 
 def _scheduled_job_response_entry(worker):
     from datetime import datetime

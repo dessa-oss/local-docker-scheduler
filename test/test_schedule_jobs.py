@@ -258,3 +258,12 @@ class TestScheduleJobs(unittest.TestCase):
         for job_bundle in [job_bundle_0, job_bundle_1]:
             self.assertEqual(expected_schedule, response_json[job_bundle]['schedule'])
             self.assertLessEqual(response_json[job_bundle]['next_run_time'] - now, 4)
+
+    def test_schedule_job_with_no_bundle_gives_409_conflict(self):
+        job_bundle_name = 'fake_job'
+        
+        job_payload = self._job_payload(job_bundle_name)
+        response = self._schedule_job(job_payload)
+        
+        self.assertEqual(409, response.status_code)
+        self.assertEqual('Cannot schedule a job that has no uploaded bundle', response.text)
