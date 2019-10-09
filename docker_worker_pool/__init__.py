@@ -55,7 +55,7 @@ class DockerWorker:
     def apscheduler_job(self):
         return self._APSSchedulerJob
 
-    def run_job(self, job, gpu_ids=None):
+    def run_job(self, job, gpu_ids=None, remove_working_dir=True):
         import subprocess
         self._job = job
 
@@ -115,7 +115,7 @@ class DockerWorker:
                 failed_jobs[job_id] = job
                 tracker_clients.failed(job)
 
-            self._cleanup_job(container, job_id)
+            self._cleanup_job(container, job_id, remove_working_dir)
 
         finally:
             self._delete_running_job(job_id)
@@ -267,7 +267,7 @@ class DockerWorker:
                 f"Please cleanup manually from ~/.foundations/local_docker_scheduler/work_dir/{job_id}")
 
     @staticmethod
-    def _cleanup_job(container, job_id):
+    def _cleanup_job(container, job_id, remove_working_dir):
         try:
             logging.info("Removing container...")
             container.remove(v=True)
@@ -276,8 +276,8 @@ class DockerWorker:
             logging.error(f"Could not remove container {container.id}")
             logging.error(str(ex))
 
-        DockerWorker.remove_working_directory(job_id)
-
+        if remove_working_dir:
+            DockerWorker.remove_working_directory(job_id)
 
 def add():
     try:
@@ -295,9 +295,11 @@ def add():
 
 def add_cron_worker(scheduled_job):
     try:
-        worker_id = sorted(_cron_workers)[-1] + 1
+        cron_worker_index = sorted(_cron_workers)[-1] + 1
     except IndexError:
-        worker_id = 0
+        cron_worker_index = 0
+
+    worker_id = f'cron_{cron_worker_index}'
 
     if len(get_cron_workers()) == _max_cron_workers:
         raise ResourceWarning("Maximum number of scheduled jobs reached. Unable to process job")
@@ -307,12 +309,11 @@ def add_cron_worker(scheduled_job):
                                                  trigger='cron',
                                                  **scheduled_job['schedule'],
                                                  args=[worker_id, scheduled_job],
-                                                 id=str(worker_id),
-                                                 name=scheduled_job.job_id)
+                                                 id=worker_id,
+                                                 name=scheduled_job['job_id'])
 
         _cron_workers[worker_id] = DockerWorker(worker_id, cron_job)
         return str(worker_id)
-
 
 def get_cron_workers():
     return _cron_workers
@@ -375,4 +376,4 @@ def worker_job(worker_id):
 
 
 def cron_worker_job(worker_id, scheduled_job):
-    _cron_workers[worker_id].run_job(scheduled_job)
+    _cron_workers[worker_id].run_job(scheduled_job, remove_working_dir=False)
