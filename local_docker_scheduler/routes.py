@@ -103,8 +103,8 @@ def _scheduled_job_response_entry(worker):
 def _schedule_dict(trigger):
     return {field.name: str(field) for field in trigger.fields}
 
-# @app.route('/scheduled_jobs/<string:job_id>', methods=['DELETE'])
-# def delete_scheduled_job(job_id):
+@app.route('/scheduled_jobs/<string:job_id>', methods=['DELETE'])
+def delete_scheduled_job(job_id):
 #     # Delete the worker associated with the scheduled job
 #     worker = docker_worker_pool.cron_worker_by_job_id(job_id)
 #     try:
@@ -112,7 +112,7 @@ def _schedule_dict(trigger):
 #         return make_response(jsonify({}), 204)
 #     # TODO - Capture a a more specific error
 #     except:
-#         return f"Scheduled job {job_id} not found", 404
+    return f'Scheduled job {job_id} not found', 404
 
 
 # @app.route('/scheduled_jobs/<string:job_id>/pause', methods=['POST'])

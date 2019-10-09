@@ -81,6 +81,10 @@ class TestScheduleJobs(unittest.TestCase):
         import requests
         return requests.get('http://localhost:5000/scheduled_jobs')
 
+    def _delete_scheduled_job(self, job_id):
+        import requests
+        return requests.delete(f'http://localhost:5000/scheduled_jobs/{job_id}')
+
     def _job_payload(self, job_bundle_name):
         import os
 
@@ -269,3 +273,10 @@ class TestScheduleJobs(unittest.TestCase):
         
         self.assertEqual(409, response.status_code)
         self.assertEqual('Cannot schedule a job that has no uploaded bundle', response.text)
+
+    def test_delete_scheduled_job_that_does_not_exist_returns_404(self):
+        job_bundle_name = 'fake_job'
+
+        response = self._delete_scheduled_job(job_bundle_name)
+        self.assertEqual(404, response.status_code)
+        self.assertEqual(f'Scheduled job {job_bundle_name} not found', response.text)
