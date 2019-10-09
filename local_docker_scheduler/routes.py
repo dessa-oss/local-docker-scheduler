@@ -34,13 +34,13 @@ def save_job_bundle():
         return "Job bundle not found in request", 400
 
     bundle_file = request.files['job_bundle']
-    tarball = f'/tmp/{secure_filename(bundle_file.filename)}.tgz'
+    tarball = f'/tmp/{secure_filename(bundle_file.filename)}'
     bundle_file.save(tarball)
 
     try:
         with tarfile.open(tarball) as tar:
             tar.extractall(path=_WORKING_DIR)
-        return "Job bundle uploaded", 200
+        return 'Job bundle uploaded', 200
     except tarfile.ReadError:
         return 'Invalid job bundle', 400
     finally:
