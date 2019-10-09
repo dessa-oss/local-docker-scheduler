@@ -377,7 +377,6 @@ def worker_job(worker_id):
 def cron_worker_job(cron_worker_index, scheduled_job):
     import copy
     import math
-    import shutil
     import time
 
     timestamp = math.floor(time.time())
@@ -385,9 +384,18 @@ def cron_worker_job(cron_worker_index, scheduled_job):
     old_job_id = scheduled_job['job_id']
     new_job_id = f'{old_job_id}-{timestamp}'
 
+    _create_scheduled_run_directory(old_job_id, new_job_id)
+    scheduled_job_run = _create_scheduled_run_job_spec(scheduled_job, new_job_id)
+
+    _cron_workers[cron_worker_index].run_job(scheduled_job_run)
+
+def _create_scheduled_run_directory(old_job_id, new_job_id):
+    import shutil
+
     shutil.rmtree(f'{_WORKING_DIR}/{new_job_id}', ignore_errors=True)
     shutil.copytree(f'{_WORKING_DIR}/{old_job_id}', f'{_WORKING_DIR}/{new_job_id}')
 
+def _create_scheduled_run_job_spec(scheduled_job, new_job_id):
     scheduled_job_run = copy.deepcopy(scheduled_job)
     scheduled_job_run['job_id'] = new_job_id
 
@@ -395,7 +403,7 @@ def cron_worker_job(cron_worker_index, scheduled_job):
     spec['environment']['JOB_ID'] = new_job_id
     spec['volumes'] = _rewrite_volumes(spec['volumes'], new_job_id)
 
-    _cron_workers[cron_worker_index].run_job(scheduled_job_run)
+    return scheduled_job_run
 
 def _rewrite_volumes(spec_volumes, new_job_id):
     import os.path as path
