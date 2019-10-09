@@ -59,6 +59,9 @@ def scheduled_jobs():
 
     if not isinstance(schedule, dict) or job_id is None or not isinstance(spec, dict):
         return "Job must contain valid 'job_id', 'spec', 'schedule'", 400
+    
+    if len(schedule.items()) == 0:
+        return "Invalid job schedule", 400
 
     scheduled_job = {'job_id': job_id,
                         'spec': spec,
@@ -69,9 +72,10 @@ def scheduled_jobs():
     # try:
     docker_worker_pool.add_cron_worker(scheduled_job)
     return make_response(jsonify(job_id), 201)
-        # # TODO - catch error for invalid schedule
-        # except ResourceWarning:
-        #     return "Maximum number of scheduled jobs reached", 400
+        
+    # except ResourceWarning:
+    #     return "Maximum number of scheduled jobs reached", 400
+
     # else:
     #     current_scheduled_jobs = docker_worker_pool.get_cron_workers()
     #     return jsonify({worker.apscheduler_job.name: {'next_run_time': worker.apscheduler_job.next_run_time,

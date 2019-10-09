@@ -25,10 +25,36 @@ class TestScheduleJobs(unittest.TestCase):
         shutil.rmtree('archives_dir')
         shutil.rmtree('working_dir')
 
-    def _upload_job_bundle(self, job_tar_name):
+    def _generate_tarball(self, job_tar_source_dir):
+        import os
+        import shutil
+        import tarfile
+        import uuid
+
+        cwd = os.getcwd()
+        dir_suffix = str(uuid.uuid4())
+        job_id = f'{job_tar_source_dir}-{dir_suffix}'
+        temp_dir = f'/tmp/{job_id}'
+        tar_file = f'/tmp/{job_id}.tgz'
+
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        shutil.copytree(f'test/fixtures/jobs/{job_tar_source_dir}', temp_dir)
+
+        os.chdir('/tmp')
+
+        try:
+            with tarfile.open(tar_file, 'w:gz') as tar:
+                tar.add(job_id)
+
+            return tar_file
+        finally:
+            os.chdir(cwd)
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def _upload_job_bundle(self, job_tar_path):
         import requests
 
-        with open(f'test/fixtures/jobs/{job_tar_name}.tgz', 'rb') as tarball:
+        with open(job_tar_path, 'rb') as tarball:
             request_payload = {
                 'job_bundle': tarball
             }
@@ -36,6 +62,16 @@ class TestScheduleJobs(unittest.TestCase):
             response = requests.post('http://localhost:5000/job_bundle', files=request_payload)
         
         return response
+
+    def _create_job(self, job_tar_source_dir):
+        import os.path as path
+        
+        job_tar_path = self._generate_tarball('fake_job')
+        job_bundle_name = path.basename(job_tar_path)[:-4]
+        
+        self._upload_job_bundle(job_tar_path)
+        
+        return job_bundle_name
 
     def _schedule_job(self, job_payload):
         import requests
@@ -45,9 +81,7 @@ class TestScheduleJobs(unittest.TestCase):
         import os
         import time
 
-        job_bundle_name = 'fake_job'
-
-        self._upload_job_bundle(job_bundle_name)
+        job_bundle_name = self._create_job('fake_job')
 
         cwd = os.getcwd()
 
@@ -95,9 +129,7 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertIn(len(files_from_scheduled_job), [3, 4])
 
     def test_schedule_job_with_invalid_payload_gives_400(self):
-        job_bundle_name = 'fake_job'
-
-        self._upload_job_bundle(job_bundle_name)
+        job_bundle_name = self._create_job('fake_job')
 
         job_payload = {
             'metadata': {'project_name': 'test', 'username': 'shaz'},
@@ -112,9 +144,7 @@ class TestScheduleJobs(unittest.TestCase):
         import os
         import time
 
-        job_bundle_name = 'fake_job'
-
-        self._upload_job_bundle(job_bundle_name)
+        job_bundle_name = self._create_job('fake_job')
 
         cwd = os.getcwd()
 
@@ -134,9 +164,7 @@ class TestScheduleJobs(unittest.TestCase):
         import os
         import time
 
-        job_bundle_name = 'fake_job'
-
-        self._upload_job_bundle(job_bundle_name)
+        job_bundle_name = self._create_job('fake_job')
 
         cwd = os.getcwd()
 
@@ -158,9 +186,7 @@ class TestScheduleJobs(unittest.TestCase):
         import os
         import time
 
-        job_bundle_name = 'fake_job'
-
-        self._upload_job_bundle(job_bundle_name)
+        job_bundle_name = self._create_job('fake_job')
 
         cwd = os.getcwd()
 
@@ -177,3 +203,47 @@ class TestScheduleJobs(unittest.TestCase):
 
         self.assertEqual(400, response.status_code)
         self.assertEqual("Job must contain valid 'job_id', 'spec', 'schedule'", response.text)
+
+    def test_schedule_job_with_valid_payload_structure_but_schedule_empty_returns_400(self):
+        import os
+        import time
+
+        job_bundle_name = self._create_job('fake_job')
+
+        cwd = os.getcwd()
+
+        job_payload = {
+            'job_id': 'fake_job',
+            'spec': {
+                'image': 'python:3.6-alpine',
+                'volumes': {
+                    f'{cwd}/working_dir/{job_bundle_name}': {
+                        'bind': '/job/job_source',
+                        'mode': 'rw'
+                    },
+                    f'{cwd}/archives_dir/{job_bundle_name}': {
+                        'bind': '/job/job_archive',
+                        'mode': 'rw'
+                    }
+                },
+                'working_dir': '/job/job_source',
+                'environment': {
+                    'JOB_ID': job_bundle_name,
+                    'ENTRYPOINT': 'whatever_i_want.py'
+                },
+                'entrypoint': [
+                    '/bin/sh',
+                    '-c'
+                ],
+                'command': [
+                    'python ${ENTRYPOINT} && chmod -R a+rw /job/job_archive'
+                ]
+            },
+            'metadata': {'project_name': 'test', 'username': 'shaz'},
+            'schedule': {}
+        }
+
+        response = self._schedule_job(job_payload)
+
+        self.assertEqual(400, response.status_code)
+        self.assertEqual("Invalid job schedule", response.text)
