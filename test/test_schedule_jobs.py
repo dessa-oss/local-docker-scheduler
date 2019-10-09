@@ -89,6 +89,10 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(1)
         return response
 
+    def _update_job_schedule(self, job_id, cron_schedule):
+        import requests
+        return requests.patch(f'http://localhost:5000/scheduled_jobs/{job_id}', json=cron_schedule)
+
     def _job_payload(self, job_bundle_name):
         import os
 
@@ -313,3 +317,26 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(8)
         runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
         self.assertIn(len(runs_from_scheduled_job), [0, 1])
+
+    def test_update_job_schedule_for_nonexistent_job_returns_404(self):
+        job_id = 'fake_job'
+
+        response = self._update_job_schedule(job_id, {})
+        self.assertEqual(404, response.status_code)
+        self.assertEqual(f'Scheduled job {job_id} not found', response.text)
+
+    def test_update_job_schedule_updates_schedule(self):
+        from glob import glob
+        import time
+
+        new_schedule = {
+            'second': '*/5'
+        }
+
+        job_bundle_name, _ = self._submit_and_schedule_job()
+        response = self._update_job_schedule(job_bundle_name, new_schedule)
+        time.sleep(10)
+
+        self.assertEqual(204, response.status_code)
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        self.assertIn(len(runs_from_scheduled_job), [1, 2])
