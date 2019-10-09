@@ -55,6 +55,10 @@ class DockerWorker:
     def apscheduler_job(self):
         return self._APSSchedulerJob
 
+    @property
+    def worker_id(self):
+        return self._worker_id
+
     def run_job(self, job, gpu_ids=None, remove_working_dir=True):
         import subprocess
         self._job = job
@@ -130,6 +134,9 @@ class DockerWorker:
                 del running_jobs[job_id]
 
     def stop_job(self, reschedule=False, timeout=5):
+        if self.job is None:
+            return
+
         job = self.job
         job_id = job['job_id']
         with self._lock:
@@ -323,6 +330,15 @@ def delete_worker(worker_id, reschedule=False):
     _workers[worker_id].delete(reschedule)
     del _workers[worker_id]
 
+def delete_cron_worker(worker_id):
+    _cron_workers[worker_id].delete(reschedule=False)
+    del _cron_workers[worker_id]
+
+def delete_cron_job(job_id):
+    worker_name = cron_worker_by_job_id(job_id).worker_id
+    worker_id = int(worker_name.lstrip('cron_'))
+    delete_cron_worker(worker_id)
+    remove_working_directory(job_id)
 
 def worker_by_job_id(job_id):
     for worker_id, worker in _workers.items():

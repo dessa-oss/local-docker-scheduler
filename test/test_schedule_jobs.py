@@ -83,7 +83,11 @@ class TestScheduleJobs(unittest.TestCase):
 
     def _delete_scheduled_job(self, job_id):
         import requests
-        return requests.delete(f'http://localhost:5000/scheduled_jobs/{job_id}')
+        import time
+
+        response = requests.delete(f'http://localhost:5000/scheduled_jobs/{job_id}')
+        time.sleep(1)
+        return response
 
     def _job_payload(self, job_bundle_name):
         import os
@@ -280,3 +284,32 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._delete_scheduled_job(job_bundle_name)
         self.assertEqual(404, response.status_code)
         self.assertEqual(f'Scheduled job {job_bundle_name} not found', response.text)
+
+    def test_delete_scheduled_job_removes_job_from_scheduled_jobs_endpoint(self):
+        job_bundle_0, _ = self._submit_and_schedule_job()
+        job_bundle_1, _ = self._submit_and_schedule_job()
+
+        delete_response = self._delete_scheduled_job(job_bundle_0)
+
+        get_scheduled_jobs_response = self._scheduled_jobs()
+        get_scheduled_jobs_response_json = get_scheduled_jobs_response.json()
+
+        self.assertEqual(204, delete_response.status_code)
+        self.assertNotIn(job_bundle_0, get_scheduled_jobs_response_json)
+
+    def test_delete_scheduled_job_removes_working_dir(self):
+        import os
+
+        job_bundle_name, _ = self._submit_and_schedule_job()
+        self._delete_scheduled_job(job_bundle_name)
+        self.assertNotIn(job_bundle_name, os.listdir('working_dir'))
+
+    def test_delete_scheduled_job_stops_running_job(self):
+        from glob import glob
+        import time
+
+        job_bundle_name, _ = self._submit_and_schedule_job()
+        self._delete_scheduled_job(job_bundle_name)
+        time.sleep(8)
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        self.assertIn(len(runs_from_scheduled_job), [0, 1])
