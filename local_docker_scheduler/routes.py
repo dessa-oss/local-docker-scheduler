@@ -46,6 +46,86 @@ def save_job_bundle():
     finally:
         os.remove(tarball)
 
+
+@app.route('/scheduled_jobs', methods=['GET', 'POST'])
+def scheduled_jobs():
+    if request.method == 'POST':
+        scheduled_job = request.json
+        try:
+            job_id = scheduled_job.get('job_id', str(uuid4()))
+        except AttributeError:
+            return "Job must contain json payload", 400
+
+        scheduled_job = {'job_id': scheduled_job['job_id'],
+                         'spec': scheduled_job['spec'],
+                         'schedule': scheduled_job['schedule'],
+                         'metadata': scheduled_job.get('metadata', {}),
+                         'gpu_spec': scheduled_job.get('gpu_spec', {})}
+
+        try:
+            docker_worker_pool.add_cron_worker(scheduled_job)
+            return make_response(jsonify(job_id), 201)
+        # TODO - catch error for invalid schedule
+        except ResourceWarning:
+            return "Maximum number of scheduled jobs reached", 400
+    else:
+        current_scheduled_jobs = docker_worker_pool.get_cron_workers()
+        return jsonify({worker.apscheduler_job.name: {'next_run_time': worker.apscheduler_job.next_run_time,
+                                                      **vars(worker.apscheduler_job.trigger),
+                                                      }
+                        } for worker_id, worker in current_scheduled_jobs.items())
+
+
+@app.route('/scheduled_jobs/<string:job_id>', methods=['DELETE'])
+def delete_scheduled_job(job_id):
+    # Delete the worker associated with the scheduled job
+    worker = docker_worker_pool.cron_worker_by_job_id(job_id)
+    try:
+        worker.remove()
+        return make_response(jsonify({}), 204)
+    # TODO - Capture a a more specific error
+    except:
+        return f"Scheduled job {job_id} not found", 404
+
+
+@app.route('/scheduled_jobs/<string:job_id>/pause', methods=['POST'])
+def pause_scheduled_job(job_id):
+    # Pause the worker associated with the scheduled job
+    worker = docker_worker_pool.cron_worker_by_job_id(job_id)
+    try:
+        worker.pause()
+        return make_response(jsonify({}), 204)
+    # TODO - Capture a a more specific error
+    except:
+        return f"Scheduled job {job_id} not found", 404
+
+
+@app.route('/scheduled_jobs/<string:job_id>/resume', methods=['POST'])
+def resume_scheduled_job(job_id):
+    worker = docker_worker_pool.cron_worker_by_job_id(job_id)
+    try:
+        worker.resume()
+        return make_response(jsonify({}), 204)
+    # TODO - Capture a a more specific error
+    except:
+        return f"Scheduled job {job_id} not found", 404
+
+
+@app.route('/scheduled_jobs/<string:job_id>/update', methods=['POST'])
+def update_scheduled_job(job_id):
+    worker = docker_worker_pool.cron_worker_by_job_id(job_id)
+    job = request.json
+    new_schedule = job.get('schedule', {})
+    if not new_schedule:
+        return "Bad job schedule", 400
+    try:
+        worker.reschedule('cron', **new_schedule)
+        return make_response(jsonify({}), 204)
+    # TODO - Capture a a more specific error
+    except:
+        return f"Scheduled job {job_id} not found", 404
+
+
 @app.route('/queued_jobs', methods=['GET', 'POST'])
 def queued_jobs():
     if request.method == 'POST':

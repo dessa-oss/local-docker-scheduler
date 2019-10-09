@@ -22,8 +22,11 @@ from tracker_client_plugins import tracker_clients
 
 _workers = {}
 _interval = 2
+_cron_workers = {}
+_max_cron_workers = 5
 
 _WORKING_DIR = os.environ.get('WORKING_DIR', '/working_dir')
+
 
 class DockerWorker:
     def __init__(self, worker_id, APSSchedulerJob):
@@ -47,6 +50,10 @@ class DockerWorker:
     @property
     def job(self):
         return self._job
+
+    @property
+    def apscheduler_job(self):
+        return self._APSSchedulerJob
 
     def run_job(self, job, gpu_ids=None):
         import subprocess
@@ -286,6 +293,31 @@ def add():
     return str(worker_id)
 
 
+def add_cron_worker(scheduled_job):
+    try:
+        worker_id = sorted(_cron_workers)[-1] + 1
+    except IndexError:
+        worker_id = 0
+
+    if len(get_cron_workers()) == _max_cron_workers:
+        raise ResourceWarning("Maximum number of scheduled jobs reached. Unable to process job")
+
+    else:
+        cron_job = get_app().apscheduler.add_job(func=cron_worker_job,
+                                                 trigger='cron',
+                                                 **scheduled_job['schedule'],
+                                                 args=[worker_id, scheduled_job],
+                                                 id=str(worker_id),
+                                                 name=scheduled_job.job_id)
+
+        _cron_workers[worker_id] = DockerWorker(worker_id, cron_job)
+        return str(worker_id)
+
+
+def get_cron_workers():
+    return _cron_workers
+
+
 def delete_worker(worker_id, reschedule=False):
     _workers[worker_id].delete(reschedule)
     del _workers[worker_id]
@@ -294,6 +326,14 @@ def delete_worker(worker_id, reschedule=False):
 def worker_by_job_id(job_id):
     for worker_id, worker in _workers.items():
         if worker.job is not None and worker.job['job_id'] == job_id:
+            return worker
+    else:
+        return None
+
+
+def cron_worker_by_job_id(job_id):
+    for worker_id, worker in _cron_workers.items():
+        if worker.apscheduler_job.name == job_id:
             return worker
     else:
         return None
@@ -332,3 +372,7 @@ def delete_archive(job_id):
 
 def worker_job(worker_id):
     _workers[worker_id].peek_queue()
+
+
+def cron_worker_job(worker_id, scheduled_job):
+    _cron_workers[worker_id].run_job(scheduled_job)
