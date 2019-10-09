@@ -95,7 +95,7 @@ class TestScheduleJobs(unittest.TestCase):
                         'bind': '/job/job_source',
                         'mode': 'rw'
                     },
-                    f'{cwd}/archives_dir/{job_bundle_name}': {
+                    f'{cwd}/archives_dir': {
                         'bind': '/job/job_archive',
                         'mode': 'rw'
                     }
@@ -126,7 +126,7 @@ class TestScheduleJobs(unittest.TestCase):
         return job_bundle_name, response
 
     def test_scheduled_job_runs_on_schedule(self):
-        import os
+        from glob import glob
         import time
 
         job_bundle_name = self._create_job('fake_job')
@@ -139,8 +139,10 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        files_from_scheduled_job = os.listdir(f'archives_dir/{job_bundle_name}')
-        self.assertIn(len(files_from_scheduled_job), [3, 4])
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        submitted_job_dirs = glob(f'working_dir/{job_bundle_name}*')
+        self.assertIn(len(runs_from_scheduled_job), [3, 4])
+        self.assertIn(len(submitted_job_dirs), [1, 2])
 
     def test_schedule_job_with_invalid_payload_gives_400(self):
         job_bundle_name = self._create_job('fake_job')

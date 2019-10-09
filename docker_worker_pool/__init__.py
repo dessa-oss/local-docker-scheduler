@@ -374,6 +374,38 @@ def delete_archive(job_id):
 def worker_job(worker_id):
     _workers[worker_id].peek_queue()
 
-
 def cron_worker_job(cron_worker_index, scheduled_job):
-    _cron_workers[cron_worker_index].run_job(scheduled_job, remove_working_dir=False)
+    import copy
+    import math
+    import shutil
+    import time
+
+    timestamp = math.floor(time.time())
+
+    old_job_id = scheduled_job['job_id']
+    new_job_id = f'{old_job_id}-{timestamp}'
+
+    shutil.rmtree(f'{_WORKING_DIR}/{new_job_id}', ignore_errors=True)
+    shutil.copytree(f'{_WORKING_DIR}/{old_job_id}', f'{_WORKING_DIR}/{new_job_id}')
+
+    scheduled_job_run = copy.deepcopy(scheduled_job)
+    scheduled_job_run['job_id'] = new_job_id
+
+    spec = scheduled_job_run['spec']
+    spec['environment']['JOB_ID'] = new_job_id
+    spec['volumes'] = _rewrite_volumes(spec['volumes'], new_job_id)
+
+    _cron_workers[cron_worker_index].run_job(scheduled_job_run)
+
+def _rewrite_volumes(spec_volumes, new_job_id):
+    import os.path as path
+
+    new_volumes = {}
+
+    for host_path, volume_information in spec_volumes.items():
+        if volume_information['bind'] == '/job/job_source':
+            host_path = path.join(path.dirname(host_path), new_job_id)
+
+        new_volumes[host_path] = volume_information
+
+    return new_volumes
