@@ -69,12 +69,11 @@ def scheduled_jobs():
                         'metadata': scheduled_job.get('metadata', {}),
                         'gpu_spec': scheduled_job.get('gpu_spec', {})}
 
-    # try:
-    docker_worker_pool.add_cron_worker(scheduled_job)
-    return make_response(jsonify(job_id), 201)
-        
-    # except ResourceWarning:
-    #     return "Maximum number of scheduled jobs reached", 400
+    try:
+        docker_worker_pool.add_cron_worker(scheduled_job)
+        return make_response(jsonify(job_id), 201)
+    except ResourceWarning:
+        return "Maximum number of scheduled jobs reached", 400
 
     # else:
     #     current_scheduled_jobs = docker_worker_pool.get_cron_workers()

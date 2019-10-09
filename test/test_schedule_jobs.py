@@ -77,15 +77,12 @@ class TestScheduleJobs(unittest.TestCase):
         import requests
         return requests.post('http://localhost:5000/scheduled_jobs', json=job_payload)
 
-    def test_scheduled_job_runs_on_schedule(self):
+    def _job_payload(self, job_bundle_name):
         import os
-        import time
-
-        job_bundle_name = self._create_job('fake_job')
 
         cwd = os.getcwd()
 
-        job_payload = {
+        return {
             'job_id': job_bundle_name,
             'spec': {
                 'image': 'python:3.6-alpine',
@@ -118,6 +115,13 @@ class TestScheduleJobs(unittest.TestCase):
             }
         }
 
+    def test_scheduled_job_runs_on_schedule(self):
+        import os
+        import time
+
+        job_bundle_name = self._create_job('fake_job')
+        job_payload = self._job_payload(job_bundle_name)
+
         response = self._schedule_job(job_payload)
 
         self.assertEqual(201, response.status_code)
@@ -130,10 +134,11 @@ class TestScheduleJobs(unittest.TestCase):
 
     def test_schedule_job_with_invalid_payload_gives_400(self):
         job_bundle_name = self._create_job('fake_job')
+        job_payload = self._job_payload(job_bundle_name)
 
-        job_payload = {
-            'metadata': {'project_name': 'test', 'username': 'shaz'},
-        }
+        job_payload.pop('job_id')
+        job_payload.pop('spec')
+        job_payload.pop('schedule')
 
         response = self._schedule_job(job_payload)
 
@@ -141,19 +146,14 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual("Job must contain 'job_id', 'spec', 'schedule'", response.text)
 
     def test_schedule_job_with_valid_payload_structure_but_invalid_payload_contents_400(self):
-        import os
         import time
 
         job_bundle_name = self._create_job('fake_job')
+        job_payload = self._job_payload(job_bundle_name)
 
-        cwd = os.getcwd()
-
-        job_payload = {
-            'job_id': None,
-            'spec': None,
-            'metadata': {'project_name': 'test', 'username': 'shaz'},
-            'schedule': None
-        }
+        job_payload['job_id'] = None
+        job_payload['spec'] = None
+        job_payload['schedule'] = None
 
         response = self._schedule_job(job_payload)
 
@@ -165,17 +165,10 @@ class TestScheduleJobs(unittest.TestCase):
         import time
 
         job_bundle_name = self._create_job('fake_job')
+        job_payload = self._job_payload(job_bundle_name)
 
-        cwd = os.getcwd()
-
-        job_payload = {
-            'job_id': None,
-            'spec': None,
-            'metadata': {'project_name': 'test', 'username': 'shaz'},
-            'schedule': {
-                'second': '*/2'
-            }
-        }
+        job_payload['job_id'] = None
+        job_payload['spec'] = None
 
         response = self._schedule_job(job_payload)
 
@@ -187,17 +180,9 @@ class TestScheduleJobs(unittest.TestCase):
         import time
 
         job_bundle_name = self._create_job('fake_job')
+        job_payload = self._job_payload(job_bundle_name)
 
-        cwd = os.getcwd()
-
-        job_payload = {
-            'job_id': 'fake_job',
-            'spec': None,
-            'metadata': {'project_name': 'test', 'username': 'shaz'},
-            'schedule': {
-                'second': '*/2'
-            }
-        }
+        job_payload['spec'] = None
 
         response = self._schedule_job(job_payload)
 
@@ -209,41 +194,27 @@ class TestScheduleJobs(unittest.TestCase):
         import time
 
         job_bundle_name = self._create_job('fake_job')
+        job_payload = self._job_payload(job_bundle_name)
 
-        cwd = os.getcwd()
-
-        job_payload = {
-            'job_id': 'fake_job',
-            'spec': {
-                'image': 'python:3.6-alpine',
-                'volumes': {
-                    f'{cwd}/working_dir/{job_bundle_name}': {
-                        'bind': '/job/job_source',
-                        'mode': 'rw'
-                    },
-                    f'{cwd}/archives_dir/{job_bundle_name}': {
-                        'bind': '/job/job_archive',
-                        'mode': 'rw'
-                    }
-                },
-                'working_dir': '/job/job_source',
-                'environment': {
-                    'JOB_ID': job_bundle_name,
-                    'ENTRYPOINT': 'whatever_i_want.py'
-                },
-                'entrypoint': [
-                    '/bin/sh',
-                    '-c'
-                ],
-                'command': [
-                    'python ${ENTRYPOINT} && chmod -R a+rw /job/job_archive'
-                ]
-            },
-            'metadata': {'project_name': 'test', 'username': 'shaz'},
-            'schedule': {}
-        }
+        job_payload['schedule'] = {}
 
         response = self._schedule_job(job_payload)
 
         self.assertEqual(400, response.status_code)
         self.assertEqual("Invalid job schedule", response.text)
+
+    def test_schedule_too_many_jobs_returns_400(self):
+        def _submit_job():
+            job_bundle_name = self._create_job('fake_job')
+            job_payload = self._job_payload(job_bundle_name)
+            response = self._schedule_job(job_payload)
+            return job_bundle_name, response
+
+        for _ in range(10):
+            job_bundle_name, response = _submit_job()
+            self.assertEqual(201, response.status_code)
+            self.assertEqual(f'"{job_bundle_name}"\n', response.text)
+
+        job_bundle_name, response = _submit_job()
+        self.assertEqual(400, response.status_code)
+        self.assertEqual('Maximum number of scheduled jobs reached', response.text)

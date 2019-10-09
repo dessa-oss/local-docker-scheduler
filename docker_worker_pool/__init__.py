@@ -23,7 +23,7 @@ from tracker_client_plugins import tracker_clients
 _workers = {}
 _interval = 2
 _cron_workers = {}
-_max_cron_workers = 5
+_max_cron_workers = 10
 
 _WORKING_DIR = os.environ.get('WORKING_DIR', '/working_dir')
 
@@ -308,11 +308,11 @@ def add_cron_worker(scheduled_job):
         cron_job = get_app().apscheduler.add_job(func=cron_worker_job,
                                                  trigger='cron',
                                                  **scheduled_job['schedule'],
-                                                 args=[worker_id, scheduled_job],
+                                                 args=[cron_worker_index, scheduled_job],
                                                  id=worker_id,
                                                  name=scheduled_job['job_id'])
 
-        _cron_workers[worker_id] = DockerWorker(worker_id, cron_job)
+        _cron_workers[cron_worker_index] = DockerWorker(worker_id, cron_job)
         return str(worker_id)
 
 def get_cron_workers():
@@ -375,5 +375,5 @@ def worker_job(worker_id):
     _workers[worker_id].peek_queue()
 
 
-def cron_worker_job(worker_id, scheduled_job):
-    _cron_workers[worker_id].run_job(scheduled_job, remove_working_dir=False)
+def cron_worker_job(cron_worker_index, scheduled_job):
+    _cron_workers[cron_worker_index].run_job(scheduled_job, remove_working_dir=False)
