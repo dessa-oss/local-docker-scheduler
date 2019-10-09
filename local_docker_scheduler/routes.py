@@ -46,36 +46,36 @@ def save_job_bundle():
     finally:
         os.remove(tarball)
 
-@app.route('/scheduled_jobs', methods=['POST'])
+@app.route('/scheduled_jobs', methods=['GET', 'POST'])
 def scheduled_jobs():
-    # if request.method == 'POST':
-    scheduled_job = request.json
-    try:
-        job_id = scheduled_job['job_id']
-        spec = scheduled_job['spec']
-        schedule = scheduled_job['schedule']
-    except KeyError:
-        return "Job must contain 'job_id', 'spec', 'schedule'", 400
+    if request.method == 'POST':
+        scheduled_job = request.json
+        try:
+            job_id = scheduled_job['job_id']
+            spec = scheduled_job['spec']
+            schedule = scheduled_job['schedule']
+        except KeyError:
+            return "Job must contain 'job_id', 'spec', 'schedule'", 400
 
-    if not isinstance(schedule, dict) or job_id is None or not isinstance(spec, dict):
-        return "Job must contain valid 'job_id', 'spec', 'schedule'", 400
-    
-    if len(schedule.items()) == 0:
-        return "Invalid job schedule", 400
+        if not isinstance(schedule, dict) or job_id is None or not isinstance(spec, dict):
+            return "Job must contain valid 'job_id', 'spec', 'schedule'", 400
+        
+        if len(schedule.items()) == 0:
+            return "Invalid job schedule", 400
 
-    scheduled_job = {'job_id': job_id,
-                        'spec': spec,
-                        'schedule': schedule,
-                        'metadata': scheduled_job.get('metadata', {}),
-                        'gpu_spec': scheduled_job.get('gpu_spec', {})}
+        scheduled_job = {'job_id': job_id,
+                            'spec': spec,
+                            'schedule': schedule,
+                            'metadata': scheduled_job.get('metadata', {}),
+                            'gpu_spec': scheduled_job.get('gpu_spec', {})}
 
-    try:
-        docker_worker_pool.add_cron_worker(scheduled_job)
-        return make_response(jsonify(job_id), 201)
-    except ResourceWarning:
-        return "Maximum number of scheduled jobs reached", 400
-
-    # else:
+        try:
+            docker_worker_pool.add_cron_worker(scheduled_job)
+            return make_response(jsonify(job_id), 201)
+        except ResourceWarning:
+            return "Maximum number of scheduled jobs reached", 400
+    else:
+        return jsonify({})
     #     current_scheduled_jobs = docker_worker_pool.get_cron_workers()
     #     return jsonify({worker.apscheduler_job.name: {'next_run_time': worker.apscheduler_job.next_run_time,
     #                                                   **vars(worker.apscheduler_job.trigger),

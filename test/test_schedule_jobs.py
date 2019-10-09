@@ -77,6 +77,10 @@ class TestScheduleJobs(unittest.TestCase):
         import requests
         return requests.post('http://localhost:5000/scheduled_jobs', json=job_payload)
 
+    def _scheduled_jobs(self):
+        import requests
+        return requests.get('http://localhost:5000/scheduled_jobs')
+
     def _job_payload(self, job_bundle_name):
         import os
 
@@ -114,6 +118,12 @@ class TestScheduleJobs(unittest.TestCase):
                 'second': '*/2'
             }
         }
+
+    def _submit_and_schedule_job(self):
+        job_bundle_name = self._create_job('fake_job')
+        job_payload = self._job_payload(job_bundle_name)
+        response = self._schedule_job(job_payload)
+        return job_bundle_name, response
 
     def test_scheduled_job_runs_on_schedule(self):
         import os
@@ -204,17 +214,17 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual("Invalid job schedule", response.text)
 
     def test_schedule_too_many_jobs_returns_400(self):
-        def _submit_job():
-            job_bundle_name = self._create_job('fake_job')
-            job_payload = self._job_payload(job_bundle_name)
-            response = self._schedule_job(job_payload)
-            return job_bundle_name, response
-
         for _ in range(10):
-            job_bundle_name, response = _submit_job()
+            job_bundle_name, response = self._submit_and_schedule_job()
             self.assertEqual(201, response.status_code)
             self.assertEqual(f'"{job_bundle_name}"\n', response.text)
 
-        job_bundle_name, response = _submit_job()
+        job_bundle_name, response = self._submit_and_schedule_job()
         self.assertEqual(400, response.status_code)
         self.assertEqual('Maximum number of scheduled jobs reached', response.text)
+
+    def test_get_scheduled_jobs_returns_empty_dict_and_200_if_no_jobs_scheduled(self):
+        response = self._scheduled_jobs()
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual({}, response.json())
