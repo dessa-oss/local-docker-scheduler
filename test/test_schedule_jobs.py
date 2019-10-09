@@ -228,3 +228,33 @@ class TestScheduleJobs(unittest.TestCase):
 
         self.assertEqual(200, response.status_code)
         self.assertEqual({}, response.json())
+
+    def test_get_scheduled_jobs_returns_dict_with_scheduled_jobs_if_any(self):
+        import math
+        import time
+
+        now = math.floor(time.time())
+
+        job_bundle_0, _ = self._submit_and_schedule_job()
+        job_bundle_1, _ = self._submit_and_schedule_job()
+
+        response = self._scheduled_jobs()
+        response_json = response.json()
+
+        expected_schedule = {
+            'day': '*',
+            'day_of_week': '*',
+            'hour': '*',
+            'minute': '*',
+            'month': '*',
+            'second': '*/2',
+            'week': '*',
+            'year': '*'
+        }
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(2, len(response_json))
+
+        for job_bundle in [job_bundle_0, job_bundle_1]:
+            self.assertEqual(expected_schedule, response_json[job_bundle]['schedule'])
+            self.assertLessEqual(response_json[job_bundle]['next_run_time'] - now, 4)

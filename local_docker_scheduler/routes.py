@@ -75,13 +75,23 @@ def scheduled_jobs():
         except ResourceWarning:
             return "Maximum number of scheduled jobs reached", 400
     else:
-        return jsonify({})
-    #     current_scheduled_jobs = docker_worker_pool.get_cron_workers()
-    #     return jsonify({worker.apscheduler_job.name: {'next_run_time': worker.apscheduler_job.next_run_time,
-    #                                                   **vars(worker.apscheduler_job.trigger),
-    #                                                   }
-    #                     } for worker_id, worker in current_scheduled_jobs.items())
+        current_scheduled_jobs = docker_worker_pool.get_cron_workers()
+        return jsonify({worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values()})
 
+def _scheduled_job_response_entry(worker):
+    from datetime import datetime
+    import math
+
+    next_run_datetime = worker.apscheduler_job.next_run_time
+    next_run_timestamp = datetime.timestamp(next_run_datetime)
+
+    return {
+        'next_run_time': math.floor(next_run_timestamp),
+        'schedule': _schedule_dict(worker.apscheduler_job.trigger)
+    }
+
+def _schedule_dict(trigger):
+    return {field.name: str(field) for field in trigger.fields}
 
 # @app.route('/scheduled_jobs/<string:job_id>', methods=['DELETE'])
 # def delete_scheduled_job(job_id):
