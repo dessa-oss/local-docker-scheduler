@@ -17,23 +17,19 @@ def get_app():
     import yaml
     from flask import Flask
     from flask_apscheduler import APScheduler
+    from apscheduler.jobstores.redis import RedisJobStore
+    from apscheduler.jobstores.memory import MemoryJobStore
 
     from tracker_client_plugins import tracker_clients
     import docker_worker_pool
     from local_docker_scheduler import routes
+    from docker_worker_pool import get_cron_workers, DockerWorker
 
     global _app
     if _app is not None:
         return _app
 
     _app = Flask(__name__)
-
-    scheduler = APScheduler()
-
-    # it is also possible to enable the API directly
-    # scheduler.api_enabled = True
-    scheduler.init_app(_app)
-    atexit.register(lambda: scheduler.shutdown(wait=False))
 
     # load tracker plugins
     try:
@@ -45,10 +41,30 @@ def get_app():
     except FileNotFoundError:
         pass
 
+    job_stores = {
+        'redis': RedisJobStore(host=tracker_dict['redis_tracker_client']['host'],
+                               port=tracker_dict['redis_tracker_client']['port']),
+        'default': MemoryJobStore()}
+
+    _app.config['SCHEDULER_JOBSTORES'] = job_stores
+
+    scheduler = APScheduler()
+
+    # it is also possible to enable the API directly
+    # scheduler.api_enabled = True
+    scheduler.init_app(_app)
+    atexit.register(lambda: scheduler.shutdown(wait=False))
+
     num_workers = int(os.environ.get("NUM_WORKERS", 1))
     for i in range(num_workers):
         docker_worker_pool.add()
 
     scheduler.start()
+
+    loaded_scheduled_jobs = scheduler.get_jobs(jobstore='redis')
+    _cron_workers = get_cron_workers()
+    if loaded_scheduled_jobs:
+        for index, cron_job in enumerate(loaded_scheduled_jobs):
+            _cron_workers[index] = DockerWorker(cron_job.id, cron_job)
 
     return _app

@@ -317,7 +317,8 @@ def add_cron_worker(scheduled_job):
                                                  **scheduled_job['schedule'],
                                                  args=[cron_worker_index, scheduled_job],
                                                  id=worker_id,
-                                                 name=scheduled_job['job_id'])
+                                                 name=scheduled_job['job_id'],
+                                                 jobstore='redis')
 
         _cron_workers[cron_worker_index] = DockerWorker(worker_id, cron_job)
         return str(worker_id)
@@ -336,9 +337,13 @@ def delete_cron_worker(worker_id):
 
 def delete_cron_job(job_id):
     worker_name = cron_worker_by_job_id(job_id).worker_id
-    worker_id = int(worker_name.lstrip('cron_'))
-    delete_cron_worker(worker_id)
+    worker_index = get_cron_worker_index(worker_name)
+    delete_cron_worker(worker_index)
     remove_working_directory(job_id)
+
+def get_cron_worker_index(worker_id):
+    worker_index = int(worker_id.lstrip('cron_'))
+    return worker_index
 
 def worker_by_job_id(job_id):
     for worker_id, worker in _workers.items():
