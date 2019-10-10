@@ -152,19 +152,22 @@ def update_scheduled_job_status(job_id):
     except:
         return f"Scheduled job {job_id} not found", 404
 
-@app.route('/scheduled_jobs/<string:job_id>', methods=['PATCH'])
+@app.route('/scheduled_jobs/<string:job_id>', methods=['GET', 'PATCH'])
 def update_scheduled_job_schedule(job_id):
-    worker = docker_worker_pool.cron_worker_by_job_id(job_id)
-    job = request.json
-    new_schedule = job.get('schedule', {})
-    if not new_schedule:
-        return "Bad job schedule", 400
-    try:
-        worker.apscheduler_job.reschedule('cron', **new_schedule)
-        return make_response(jsonify({}), 204)
-    # TODO - Capture a a more specific error
-    except:
-        return f"Scheduled job {job_id} not found", 404
+    if request.method == 'PATCH':
+        worker = docker_worker_pool.cron_worker_by_job_id(job_id)
+        job = request.json
+        new_schedule = job.get('schedule', {})
+        if not new_schedule:
+            return "Bad job schedule", 400
+        try:
+            worker.apscheduler_job.reschedule('cron', **new_schedule)
+            return make_response(jsonify({}), 204)
+        # TODO - Capture a a more specific error
+        except:
+            return f'Scheduled job {job_id} not found', 404
+    else:
+        return f'Scheduled job {job_id} not found', 404
 
 @app.route('/queued_jobs', methods=['GET', 'POST'])
 def queued_jobs():

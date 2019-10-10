@@ -98,6 +98,10 @@ class TestScheduleJobs(unittest.TestCase):
         import requests
         return requests.get('http://localhost:5000/scheduled_jobs')
 
+    def _scheduled_job(self, job_id):
+        import requests
+        return requests.get(f'http://localhost:5000/scheduled_jobs/{job_id}')
+
     def _delete_scheduled_job(self, job_id):
         import requests
         import time
@@ -578,3 +582,10 @@ class TestScheduleJobs(unittest.TestCase):
 
         jobs_information = self._scheduled_jobs().json()
         self.assertIn(job_bundle_1, jobs_information)
+
+    def test_get_scheduled_job_on_nonexistent_job_returns_404(self):
+        job_id = 'fake_job'
+
+        response = self._scheduled_job(job_id)
+        self.assertEqual(404, response.status_code)
+        self.assertEqual(f'Scheduled job {job_id} not found', response.text)
