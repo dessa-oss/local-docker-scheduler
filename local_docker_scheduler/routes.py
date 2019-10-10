@@ -124,7 +124,7 @@ def update_scheduled_job_status(job_id):
         if status == 'paused':
             worker.apscheduler_job.pause()
             return make_response(jsonify({}), 204)
-        elif status == 'resumed':
+        elif status == 'running':
             worker.apscheduler_job.resume()
             return make_response(jsonify({}), 204)
         else:

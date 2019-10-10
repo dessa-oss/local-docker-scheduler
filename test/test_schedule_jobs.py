@@ -15,12 +15,14 @@ class TestScheduleJobs(unittest.TestCase):
         os.makedirs('archives_dir', exist_ok=True)
         env = os.environ.copy()
         env['WORKING_DIR'] = 'working_dir'
+        env['NUM_WORKERS'] = '0'
         self._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
         time.sleep(1)
 
     def tearDown(self):
         import shutil
 
+        self._cleanup_jobs()
         self._server_process.terminate()
         shutil.rmtree('archives_dir')
         shutil.rmtree('working_dir')
@@ -97,7 +99,7 @@ class TestScheduleJobs(unittest.TestCase):
         return self._put_to_job(job_id, 'paused')
 
     def _resume_job(self, job_id):
-        return self._put_to_job(job_id, 'resumed')
+        return self._put_to_job(job_id, 'running')
 
     def _put_to_job(self, job_id, status):
         return self._put_to_job_with_payload(job_id, {'status': status})
@@ -149,6 +151,10 @@ class TestScheduleJobs(unittest.TestCase):
         job_payload = self._job_payload(job_bundle_name)
         response = self._schedule_job(job_payload)
         return job_bundle_name, response
+
+    def _cleanup_jobs(self):
+        for job in self._scheduled_jobs().json():
+            self._delete_scheduled_job(job)
 
     def test_scheduled_job_runs_on_schedule(self):
         from glob import glob
@@ -418,3 +424,11 @@ class TestScheduleJobs(unittest.TestCase):
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
+
+    def test_scheduled_jobs_have_status(self):
+        job_bundle_0, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_0)
+
+        job_bundle_1, _ = self._submit_and_schedule_job()
+
+        print(self._scheduled_jobs().json())

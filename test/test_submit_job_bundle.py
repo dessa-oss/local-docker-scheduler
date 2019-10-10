@@ -11,6 +11,7 @@ class TestSubmitJobBundle(unittest.TestCase):
         os.makedirs('working_dir', exist_ok=True)
         env = os.environ.copy()
         env['WORKING_DIR'] = 'working_dir'
+        env['NUM_WORKERS'] = '0'
         cls._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
         time.sleep(3)
 
