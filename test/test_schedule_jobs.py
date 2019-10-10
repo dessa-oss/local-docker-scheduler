@@ -99,7 +99,7 @@ class TestScheduleJobs(unittest.TestCase):
         return self._put_to_job(job_id, 'paused')
 
     def _resume_job(self, job_id):
-        return self._put_to_job(job_id, 'running')
+        return self._put_to_job(job_id, 'active')
 
     def _put_to_job(self, job_id, status):
         return self._put_to_job_with_payload(job_id, {'status': status})
@@ -438,5 +438,5 @@ class TestScheduleJobs(unittest.TestCase):
         jobs_information = self._scheduled_jobs().json()
 
         self.assertEqual('paused', jobs_information[job_bundle_0]['status'])
-        self.assertEqual('running', jobs_information[job_bundle_1]['status'])
-        self.assertEqual('running', jobs_information[job_bundle_2]['status'])
+        self.assertEqual('active', jobs_information[job_bundle_1]['status'])
+        self.assertEqual('active', jobs_information[job_bundle_2]['status'])

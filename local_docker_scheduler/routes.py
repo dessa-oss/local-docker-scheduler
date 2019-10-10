@@ -98,7 +98,7 @@ def _scheduled_job_response_entry(worker):
         status = 'paused'
         next_run_timestamp = None
     else:
-        status = 'running'
+        status = 'active'
         next_run_timestamp_float = datetime.timestamp(next_run_datetime)
         next_run_timestamp = math.floor(next_run_timestamp_float)
 
@@ -137,7 +137,7 @@ def update_scheduled_job_status(job_id):
             job.pause()
             job.next_run_time = None
             return make_response(jsonify({}), 204)
-        elif status == 'running':
+        elif status == 'active':
             now = datetime.now(get_localzone())
             next_fire_time = job.trigger.get_next_fire_time(None, now)
             job.next_run_time = next_fire_time
