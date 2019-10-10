@@ -335,6 +335,9 @@ def delete_cron_worker(worker_id):
     _cron_workers[worker_id].delete(reschedule=False)
     del _cron_workers[worker_id]
 
+def get_cron_worker_index(worker_id):
+    return int(worker_id.lstrip('cron_'))
+
 def delete_cron_job(job_id):
     worker_name = cron_worker_by_job_id(job_id).worker_id
     worker_index = get_cron_worker_index(worker_name)
