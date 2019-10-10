@@ -91,7 +91,18 @@ class TestScheduleJobs(unittest.TestCase):
 
     def _update_job_schedule(self, job_id, cron_schedule):
         import requests
-        return requests.patch(f'http://localhost:5000/scheduled_jobs/{job_id}', json=cron_schedule)
+        return requests.patch(f'http://localhost:5000/scheduled_jobs/{job_id}', json={'schedule': cron_schedule})
+
+    def _pause_job(self, job_id):
+        import requests
+        return self._put_to_job(job_id, 'pause')
+
+    def _resume_job(self, job_id):
+        return self._put_to_job(job_id, 'resume')
+
+    def _put_to_job(self, job_id, command):
+        import requests
+        return requests.put(f'http://localhost:5000/scheduled_jobs/{job_id}', json={'command': command})
 
     def _job_payload(self, job_bundle_name):
         import os
@@ -335,8 +346,22 @@ class TestScheduleJobs(unittest.TestCase):
 
         job_bundle_name, _ = self._submit_and_schedule_job()
         response = self._update_job_schedule(job_bundle_name, new_schedule)
+
         time.sleep(10)
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
 
         self.assertEqual(204, response.status_code)
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
         self.assertIn(len(runs_from_scheduled_job), [1, 2])
+
+    def test_update_job_schedule_with_empty_schedule_returns_400(self):
+        from glob import glob
+        import time
+
+        new_schedule = {}
+
+        job_bundle_name, _ = self._submit_and_schedule_job()
+        response = self._update_job_schedule(job_bundle_name, new_schedule)
+
+        self.assertEqual(400, response.status_code)
+        self.assertEqual('Bad job schedule', response.text)
+
