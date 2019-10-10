@@ -109,38 +109,30 @@ def delete_scheduled_job(job_id):
         docker_worker_pool.delete_cron_job(job_id)
         return make_response(jsonify({}), 204)
     except Exception as ex:
-        import traceback
-        import sys
-
-        logging.info(''.join(traceback.format_exception(*(sys.exc_info()))))
         return f'Scheduled job {job_id} not found', 404
 
 
-# @app.route('/scheduled_jobs/<string:job_id>/pause', methods=['POST'])
-# def pause_scheduled_job(job_id):
-#     # Pause the worker associated with the scheduled job
-#     worker = docker_worker_pool.cron_worker_by_job_id(job_id)
-#     try:
-#         worker.pause()
-#         return make_response(jsonify({}), 204)
-#     # TODO - Capture a a more specific error
-#     except:
-#         return f"Scheduled job {job_id} not found", 404
+@app.route('/scheduled_jobs/<string:job_id>/', methods=['PUT'])
+def update_scheduled_job_status(job_id):
+    status = request.json.get('status')
 
+    if status is None:
+        return 'Missing status key', 400
 
-# @app.route('/scheduled_jobs/<string:job_id>/resume', methods=['POST'])
-# def resume_scheduled_job(job_id):
-#     worker = docker_worker_pool.cron_worker_by_job_id(job_id)
-#     try:
-#         worker.resume()
-#         return make_response(jsonify({}), 204)
-#     # TODO - Capture a a more specific error
-#     except:
-#         return f"Scheduled job {job_id} not found", 404
+    try:
+        worker = docker_worker_pool.cron_worker_by_job_id(job_id)
 
+        if status == 'paused':
+            worker.apscheduler_job.pause()
+        else:
+            worker.apscheduler_job.resume()
+        return make_response(jsonify({}), 204)
+    # TODO - Capture a a more specific error
+    except:
+        return f"Scheduled job {job_id} not found", 404
 
 @app.route('/scheduled_jobs/<string:job_id>', methods=['PATCH'])
-def update_scheduled_job(job_id):
+def update_scheduled_job_schedule(job_id):
     worker = docker_worker_pool.cron_worker_by_job_id(job_id)
     job = request.json
     new_schedule = job.get('schedule', {})
@@ -149,7 +141,7 @@ def update_scheduled_job(job_id):
     try:
         worker.apscheduler_job.reschedule('cron', **new_schedule)
         return make_response(jsonify({}), 204)
-#     # TODO - Capture a a more specific error
+    # TODO - Capture a a more specific error
     except:
         return f"Scheduled job {job_id} not found", 404
 

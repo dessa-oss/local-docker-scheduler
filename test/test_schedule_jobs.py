@@ -94,15 +94,17 @@ class TestScheduleJobs(unittest.TestCase):
         return requests.patch(f'http://localhost:5000/scheduled_jobs/{job_id}', json={'schedule': cron_schedule})
 
     def _pause_job(self, job_id):
-        import requests
-        return self._put_to_job(job_id, 'pause')
+        return self._put_to_job(job_id, 'paused')
 
     def _resume_job(self, job_id):
-        return self._put_to_job(job_id, 'resume')
+        return self._put_to_job(job_id, 'resumed')
 
-    def _put_to_job(self, job_id, command):
+    def _put_to_job(self, job_id, status):
+        return self._put_to_job_with_payload(job_id, {'status': status})
+
+    def _put_to_job_with_payload(self, job_id, payload):
         import requests
-        return requests.put(f'http://localhost:5000/scheduled_jobs/{job_id}', json={'command': command})
+        return requests.put(f'http://localhost:5000/scheduled_jobs/{job_id}', json=payload)
 
     def _job_payload(self, job_bundle_name):
         import os
@@ -332,7 +334,7 @@ class TestScheduleJobs(unittest.TestCase):
     def test_update_job_schedule_for_nonexistent_job_returns_404(self):
         job_id = 'fake_job'
 
-        response = self._update_job_schedule(job_id, {})
+        response = self._update_job_schedule(job_id, {'seconds': '*/5'})
         self.assertEqual(404, response.status_code)
         self.assertEqual(f'Scheduled job {job_id} not found', response.text)
 
@@ -365,3 +367,47 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual(400, response.status_code)
         self.assertEqual('Bad job schedule', response.text)
 
+    def test_pausing_nonexistent_job_returns_404(self):
+        job_id = 'fake_job'
+
+        response = self._pause_job(job_id)
+        self.assertEqual(404, response.status_code)
+        self.assertEqual(f'Scheduled job {job_id} not found', response.text)
+
+    def test_updating_job_status_without_status_key_returns_400(self):
+        job_id = 'fake_job'
+
+        response = self._put_to_job_with_payload(job_id, {})
+        self.assertEqual(400, response.status_code)
+        self.assertEqual(f'Missing status key', response.text)
+
+    def test_pause_job_pauses_future_job_executions(self):
+        from glob import glob
+        import time
+
+        job_bundle_name, _ = self._submit_and_schedule_job()
+        response = self._pause_job(job_bundle_name)
+
+        time.sleep(7)
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+
+        self.assertEqual(204, response.status_code)
+        self.assertIn(len(runs_from_scheduled_job), [0, 1])
+
+    def test_resume_job_resumes_job_executions(self):
+        from glob import glob
+        import time
+
+        job_bundle_name, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_name)
+
+        time.sleep(7)
+
+        response = self._resume_job(job_bundle_name)
+
+        time.sleep(8)
+
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+
+        self.assertEqual(204, response.status_code)
+        self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
