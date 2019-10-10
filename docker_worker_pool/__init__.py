@@ -265,9 +265,10 @@ class DockerWorker:
 
     @staticmethod
     def remove_working_directory(job_id):
+        import os.path as path
         from shutil import rmtree
         try:
-            rmtree(f'{_WORKING_DIR}/'+job_id)
+            rmtree(path.join(_WORKING_DIR, job_id))
         except FileNotFoundError:
             logging.error(f"Could not cleanup working directory for job {job_id}")
             logging.error(
@@ -411,10 +412,14 @@ def cron_worker_job(cron_worker_index, scheduled_job):
     _cron_workers[cron_worker_index].run_job(scheduled_job_run)
 
 def _create_scheduled_run_directory(old_job_id, new_job_id):
+    import os.path as path
     import shutil
 
-    shutil.rmtree(f'{_WORKING_DIR}/{new_job_id}', ignore_errors=True)
-    shutil.copytree(f'{_WORKING_DIR}/{old_job_id}', f'{_WORKING_DIR}/{new_job_id}')
+    old_job_dir = path.join(_WORKING_DIR, old_job_id)
+    new_job_dir = path.join(_WORKING_DIR, new_job_id)
+
+    shutil.rmtree(new_job_dir, ignore_errors=True)
+    shutil.copytree(old_job_dir, new_job_dir)
 
 def _create_scheduled_run_job_spec(scheduled_job, new_job_id):
     scheduled_job_run = copy.deepcopy(scheduled_job)

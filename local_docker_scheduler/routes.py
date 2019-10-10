@@ -10,7 +10,9 @@ from db import queue, running_jobs, completed_jobs, failed_jobs
 from flask import jsonify, request, make_response
 import os
 import os.path as path
+import shutil
 import tarfile
+import tempfile
 from time import time
 from uuid import uuid4
 from werkzeug.utils import secure_filename
@@ -33,8 +35,9 @@ def save_job_bundle():
     if 'job_bundle' not in request.files:
         return "Job bundle not found in request", 400
 
+    temp_dir = tempfile.mkdtemp()
     bundle_file = request.files['job_bundle']
-    tarball = f'/tmp/{secure_filename(bundle_file.filename)}'
+    tarball = path.join(temp_dir, secure_filename(bundle_file.filename))
     bundle_file.save(tarball)
 
     try:
@@ -44,7 +47,7 @@ def save_job_bundle():
     except tarfile.ReadError:
         return 'Invalid job bundle', 400
     finally:
-        os.remove(tarball)
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 @app.route('/scheduled_jobs', methods=['GET', 'POST'])
 def scheduled_jobs():

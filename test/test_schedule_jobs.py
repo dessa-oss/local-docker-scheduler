@@ -40,20 +40,24 @@ class TestScheduleJobs(unittest.TestCase):
 
     def _generate_tarball(self, job_tar_source_dir):
         import os
+        import os.path as path
         import shutil
         import tarfile
+        import tempfile
         import uuid
+
+        temp_dir_root = tempfile.mkdtemp()
 
         cwd = os.getcwd()
         dir_suffix = str(uuid.uuid4())
         job_id = f'{job_tar_source_dir}-{dir_suffix}'
-        temp_dir = f'/tmp/{job_id}'
-        tar_file = f'/tmp/{job_id}.tgz'
+        temp_dir = path.join(temp_dir_root, job_id)
+        tar_file = path.join(temp_dir_root, f'{job_id}.tgz')
 
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        shutil.copytree(f'test/fixtures/jobs/{job_tar_source_dir}', temp_dir)
+        shutil.rmtree(temp_dir_root, ignore_errors=True)
+        shutil.copytree(path.join('test', 'fixtures', 'jobs', job_tar_source_dir), temp_dir)
 
-        os.chdir('/tmp')
+        os.chdir(temp_dir_root)
 
         try:
             with tarfile.open(tar_file, 'w:gz') as tar:
