@@ -93,11 +93,19 @@ def _scheduled_job_response_entry(worker):
     import math
 
     next_run_datetime = worker.apscheduler_job.next_run_time
-    next_run_timestamp = datetime.timestamp(next_run_datetime)
+
+    if next_run_datetime is None:
+        status = 'paused'
+        next_run_timestamp = None
+    else:
+        status = 'running'
+        next_run_timestamp_float = datetime.timestamp(next_run_datetime)
+        next_run_timestamp = math.floor(next_run_timestamp_float)
 
     return {
-        'next_run_time': math.floor(next_run_timestamp),
-        'schedule': _schedule_dict(worker.apscheduler_job.trigger)
+        'next_run_time': next_run_timestamp,
+        'schedule': _schedule_dict(worker.apscheduler_job.trigger),
+        'status': status
     }
 
 def _schedule_dict(trigger):
@@ -113,6 +121,9 @@ def delete_scheduled_job(job_id):
 
 @app.route('/scheduled_jobs/<string:job_id>/', methods=['PUT'])
 def update_scheduled_job_status(job_id):
+    from datetime import datetime
+    from tzlocal import get_localzone
+
     status = request.json.get('status')
 
     if status is None:
@@ -120,12 +131,17 @@ def update_scheduled_job_status(job_id):
 
     try:
         worker = docker_worker_pool.cron_worker_by_job_id(job_id)
+        job = worker.apscheduler_job
 
         if status == 'paused':
-            worker.apscheduler_job.pause()
+            job.pause()
+            job.next_run_time = None
             return make_response(jsonify({}), 204)
         elif status == 'running':
-            worker.apscheduler_job.resume()
+            now = datetime.now(get_localzone())
+            next_fire_time = job.trigger.get_next_fire_time(None, now)
+            job.next_run_time = next_fire_time
+            job.resume()
             return make_response(jsonify({}), 204)
         else:
             return 'Invalid status', 400

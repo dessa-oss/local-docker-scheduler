@@ -431,4 +431,12 @@ class TestScheduleJobs(unittest.TestCase):
 
         job_bundle_1, _ = self._submit_and_schedule_job()
 
-        print(self._scheduled_jobs().json())
+        job_bundle_2, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_2)
+        self._resume_job(job_bundle_2)
+
+        jobs_information = self._scheduled_jobs().json()
+
+        self.assertEqual('paused', jobs_information[job_bundle_0]['status'])
+        self.assertEqual('running', jobs_information[job_bundle_1]['status'])
+        self.assertEqual('running', jobs_information[job_bundle_2]['status'])
