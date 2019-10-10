@@ -111,7 +111,6 @@ def delete_scheduled_job(job_id):
     except Exception as ex:
         return f'Scheduled job {job_id} not found', 404
 
-
 @app.route('/scheduled_jobs/<string:job_id>/', methods=['PUT'])
 def update_scheduled_job_status(job_id):
     status = request.json.get('status')
@@ -124,9 +123,12 @@ def update_scheduled_job_status(job_id):
 
         if status == 'paused':
             worker.apscheduler_job.pause()
-        else:
+            return make_response(jsonify({}), 204)
+        elif status == 'resumed':
             worker.apscheduler_job.resume()
-        return make_response(jsonify({}), 204)
+            return make_response(jsonify({}), 204)
+        else:
+            return 'Invalid status', 400
     # TODO - Capture a a more specific error
     except:
         return f"Scheduled job {job_id} not found", 404
@@ -144,7 +146,6 @@ def update_scheduled_job_schedule(job_id):
     # TODO - Capture a a more specific error
     except:
         return f"Scheduled job {job_id} not found", 404
-
 
 @app.route('/queued_jobs', methods=['GET', 'POST'])
 def queued_jobs():
@@ -168,11 +169,9 @@ def queued_jobs():
     else:
         return jsonify({i: {**val, 'position': i} for i, val in enumerate(queue)})
 
-
 @app.route('/queued_jobs/<int:position>', methods=['GET'])
 def show_queued_job(position):
     return queue[position]
-
 
 @app.route('/queued_jobs/<int:position>', methods=['DELETE'])
 def delete_queued_job(position):
@@ -187,17 +186,14 @@ def delete_queued_job(position):
         return f"Bad queue position {position}", 404
     return make_response(jsonify({}), 204)
 
-
 @app.route('/queued_jobs/<int:position>', methods=['PATCH'])
 def reposition_queued_job(position):
     queue.reposition(position, request.json)
     return make_response(jsonify({}), 204)
 
-
 @app.route('/running_jobs', methods=['GET'])
 def show_running_jobs():
     return jsonify({key: value for key, value in running_jobs.items()})
-
 
 @app.route('/running_jobs/<string:job_id>', methods=['DELETE'])
 def delete_running_job(job_id):
@@ -207,11 +203,9 @@ def delete_running_job(job_id):
         return f"Bad job id {job_id}", 404
     return make_response(jsonify({}), 204)
 
-
 @app.route('/completed_jobs/<string:job_id>', methods=['DELETE'])
 def delete_completed_job(job_id):
     return _delete_job(job_id)
-
 
 def _delete_job(job_id):
     job = None

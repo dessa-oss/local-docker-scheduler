@@ -381,6 +381,13 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual(400, response.status_code)
         self.assertEqual(f'Missing status key', response.text)
 
+    def test_updating_job_with_invalid_status_returns_400(self):
+        job_bundle_name, _ = self._submit_and_schedule_job()
+
+        response = self._put_to_job(job_bundle_name, 'eating')
+        self.assertEqual(400, response.status_code)
+        self.assertEqual(f'Invalid status', response.text)
+
     def test_pause_job_pauses_future_job_executions(self):
         from glob import glob
         import time
