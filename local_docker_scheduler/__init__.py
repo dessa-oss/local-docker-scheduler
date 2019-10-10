@@ -64,7 +64,8 @@ def get_app():
     loaded_scheduled_jobs = scheduler.get_jobs(jobstore='redis')
     _cron_workers = get_cron_workers()
     if loaded_scheduled_jobs:
-        for index, cron_job in enumerate(loaded_scheduled_jobs):
-            _cron_workers[index] = DockerWorker(cron_job.id, cron_job)
+        for cron_job in loaded_scheduled_jobs:
+            cron_worker_index = docker_worker_pool.get_cron_worker_index(cron_job.id)
+            _cron_workers[cron_worker_index] = DockerWorker(cron_job.id, cron_job)
 
     return _app

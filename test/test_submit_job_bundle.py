@@ -20,6 +20,7 @@ class TestSubmitJobBundle(unittest.TestCase):
         import shutil
 
         cls._server_process.terminate()
+        cls._server_process.wait()
         shutil.rmtree('working_dir')
 
     def setUp(self):

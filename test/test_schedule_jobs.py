@@ -5,7 +5,6 @@ class TestScheduleJobs(unittest.TestCase):
     def setUp(self):
         import docker
         import os
-        from subprocess import Popen
         import time
 
         client = docker.from_env()
@@ -13,19 +12,31 @@ class TestScheduleJobs(unittest.TestCase):
 
         os.makedirs('working_dir', exist_ok=True)
         os.makedirs('archives_dir', exist_ok=True)
-        env = os.environ.copy()
-        env['WORKING_DIR'] = 'working_dir'
-        env['NUM_WORKERS'] = '0'
-        self._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
+        self._start_server()
         time.sleep(1)
 
     def tearDown(self):
         import shutil
 
-        self._cleanup_jobs()
+        try:
+            self._cleanup_jobs()
+        finally:
+            self._stop_server()
+            shutil.rmtree('archives_dir')
+            shutil.rmtree('working_dir')
+
+    def _start_server(self):
+        from subprocess import Popen
+        import os
+
+        env = os.environ.copy()
+        env['WORKING_DIR'] = 'working_dir'
+        env['NUM_WORKERS'] = '0'
+        self._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
+
+    def _stop_server(self):
         self._server_process.terminate()
-        shutil.rmtree('archives_dir')
-        shutil.rmtree('working_dir')
+        self._server_process.wait()
 
     def _generate_tarball(self, job_tar_source_dir):
         import os
@@ -62,17 +73,17 @@ class TestScheduleJobs(unittest.TestCase):
             }
 
             response = requests.post('http://localhost:5000/job_bundle', files=request_payload)
-        
+
         return response
 
     def _create_job(self, job_tar_source_dir):
         import os.path as path
-        
+
         job_tar_path = self._generate_tarball('fake_job')
         job_bundle_name = path.basename(job_tar_path)[:-4]
-        
+
         self._upload_job_bundle(job_tar_path)
-        
+
         return job_bundle_name
 
     def _schedule_job(self, job_payload):
@@ -153,8 +164,16 @@ class TestScheduleJobs(unittest.TestCase):
         return job_bundle_name, response
 
     def _cleanup_jobs(self):
+        failure_log = ''
+
         for job in self._scheduled_jobs().json():
-            self._delete_scheduled_job(job)
+            response = self._delete_scheduled_job(job)
+
+            if response.status_code != 204:
+                failure_log += f'failed to cleanup {job}: {response.text}\n'
+
+        if failure_log:
+            raise AssertionError(failure_log)
 
     def test_scheduled_job_runs_on_schedule(self):
         from glob import glob
@@ -294,10 +313,10 @@ class TestScheduleJobs(unittest.TestCase):
 
     def test_schedule_job_with_no_bundle_gives_409_conflict(self):
         job_bundle_name = 'fake_job'
-        
+
         job_payload = self._job_payload(job_bundle_name)
         response = self._schedule_job(job_payload)
-        
+
         self.assertEqual(409, response.status_code)
         self.assertEqual('Cannot schedule a job that has no uploaded bundle', response.text)
 
@@ -425,6 +444,46 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
 
+    def test_can_pause_job_twice(self):
+        from glob import glob
+        import time
+
+        job_bundle_name, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_name)
+        pause_response = self._pause_job(job_bundle_name)
+
+        self.assertEqual(204, pause_response.status_code)
+
+        time.sleep(7)
+
+        response = self._resume_job(job_bundle_name)
+
+        time.sleep(8)
+
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+
+        self.assertEqual(204, response.status_code)
+        self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
+
+    def test_can_resume_job_twice(self):
+        from glob import glob
+        import time
+
+        job_bundle_name, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_name)
+
+        time.sleep(7)
+
+        self._resume_job(job_bundle_name)
+        response = self._resume_job(job_bundle_name)
+
+        time.sleep(8)
+
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+
+        self.assertEqual(204, response.status_code)
+        self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
+
     def test_scheduled_jobs_have_status(self):
         job_bundle_0, _ = self._submit_and_schedule_job()
         self._pause_job(job_bundle_0)
@@ -440,3 +499,78 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual('paused', jobs_information[job_bundle_0]['status'])
         self.assertEqual('active', jobs_information[job_bundle_1]['status'])
         self.assertEqual('active', jobs_information[job_bundle_2]['status'])
+
+    def test_scheduler_persists_scheduled_and_paused_jobs(self):
+        from glob import glob
+        import time
+
+        job_bundle_0, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_0)
+
+        job_bundle_1, _ = self._submit_and_schedule_job()
+
+        self._stop_server()
+        time.sleep(1)
+        self._start_server()
+
+        time.sleep(6)
+
+        runs_from_scheduled_job_0 = glob(f'archives_dir/{job_bundle_0}-*')
+        runs_from_scheduled_job_1 = glob(f'archives_dir/{job_bundle_1}-*')
+
+        self.assertIn(len(runs_from_scheduled_job_0), [0, 1])
+        self.assertIn(len(runs_from_scheduled_job_1), [2, 3])
+
+        jobs_information = self._scheduled_jobs().json()
+        self.assertEqual('paused', jobs_information[job_bundle_0]['status'])
+        self.assertEqual('active', jobs_information[job_bundle_1]['status'])
+
+    def test_can_resume_paused_job_after_scheduler_restarts(self):
+        from glob import glob
+        import time
+
+        job_bundle_0, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_0)
+
+        job_bundle_1, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_1)
+
+        self._stop_server()
+        time.sleep(1)
+        self._start_server()
+        time.sleep(1)
+
+        self._resume_job(job_bundle_0)
+        self._resume_job(job_bundle_1)
+
+        time.sleep(6)
+
+        runs_from_scheduled_job_0 = glob(f'archives_dir/{job_bundle_0}-*')
+        self.assertIn(len(runs_from_scheduled_job_0), [2, 3])
+
+        runs_from_scheduled_job_1 = glob(f'archives_dir/{job_bundle_1}-*')
+        self.assertIn(len(runs_from_scheduled_job_1), [2, 3])
+
+        jobs_information = self._scheduled_jobs().json()
+        self.assertEqual('active', jobs_information[job_bundle_0]['status'])
+        self.assertEqual('active', jobs_information[job_bundle_1]['status'])
+
+    def test_can_delete_paused_job_after_restarting_scheduler(self):
+        from glob import glob
+        import time
+
+        job_bundle_0, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_0)
+
+        job_bundle_1, _ = self._submit_and_schedule_job()
+
+        self._stop_server()
+        time.sleep(1)
+        self._start_server()
+        time.sleep(1)
+
+        response = self._delete_scheduled_job(job_bundle_0)
+        self.assertEqual(204, response.status_code)
+
+        jobs_information = self._scheduled_jobs().json()
+        self.assertIn(job_bundle_1, jobs_information)
