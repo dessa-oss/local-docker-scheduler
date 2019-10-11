@@ -589,3 +589,47 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._scheduled_job(job_id)
         self.assertEqual(404, response.status_code)
         self.assertEqual(f'Scheduled job {job_id} not found', response.text)
+
+    def test_get_scheduled_job_returns_correct_information(self):
+        import math
+        import time
+
+        now = math.floor(time.time())
+
+        job_bundle_0, _ = self._submit_and_schedule_job()
+        job_bundle_1, _ = self._submit_and_schedule_job()
+        self._pause_job(job_bundle_0)
+
+        response_0 = self._scheduled_job(job_bundle_0)
+        response_1 = self._scheduled_job(job_bundle_1)
+        response_0_json = response_0.json()
+        response_1_json = response_1.json()
+
+        self.assertEqual(200, response_0.status_code)
+        self.assertEqual(200, response_1.status_code)
+
+        expected_schedule = {
+            'day': '*',
+            'day_of_week': '*',
+            'hour': '*',
+            'minute': '*',
+            'month': '*',
+            'second': '*/2',
+            'week': '*',
+            'year': '*'
+        }
+
+        job_bundle_0_content = response_0_json[job_bundle_0]
+        job_bundle_1_content = response_1_json[job_bundle_1]
+
+        self.assertEqual([job_bundle_0], list(response_0_json.keys()))
+        self.assertEqual(expected_schedule, job_bundle_0_content['schedule'])
+        self.assertIsNone(job_bundle_0_content['next_run_time'])
+        self.assertEqual('paused', job_bundle_0_content['status'])
+
+        self.assertEqual([job_bundle_1], list(response_1_json.keys()))
+        self.assertEqual(expected_schedule, job_bundle_1_content['schedule'])
+        self.assertLessEqual(job_bundle_1_content['next_run_time'] - now, 4)
+        self.assertEqual('active', job_bundle_1_content['status'])
+
+
