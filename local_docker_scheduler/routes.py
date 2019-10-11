@@ -21,6 +21,8 @@ import logging
 from tracker_client_plugins import tracker_clients
 
 _WORKING_DIR = os.environ.get('WORKING_DIR', '/working_dir')
+_ARCHIVE_DIR = os.environ.get('ARCHIVE_DIR', '/archives/archive')
+
 app = get_app()
 
 @app.route('/')
@@ -48,6 +50,32 @@ def save_job_bundle():
         return 'Invalid job bundle', 400
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+@app.route('/job_bundle/<string:job_id>', methods=['GET'])
+def get_job_bundle(job_id):
+    import tarfile
+    import os
+    from flask import send_file
+    if not _archive_directory_exists(job_id):
+        return f'No archive directory found for Job {job_id}', 404
+
+    try:
+        with tempfile.NamedTemporaryFile() as file:
+            with tarfile.open(fileobj=file, mode='w:gz') as tar:
+                tar.add(os.path.join(_ARCHIVE_DIR, job_id, 'artifacts'), arcname=job_id)
+            file.seek(0)
+            return send_file(file.name, attachment_filename=f'{job_id}.tgz')
+    except FileNotFoundError as e:
+        return f'The artifact directory was not found for Job {job_id}', 404
+    except PermissionError as e:
+        return f"{e}", 401
+
+def _archive_directory_exists(job_id):
+    import os
+
+    if job_id in os.listdir(_ARCHIVE_DIR):
+        return True
+    return False
 
 @app.route('/scheduled_jobs', methods=['GET', 'POST'])
 def scheduled_jobs():
