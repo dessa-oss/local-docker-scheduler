@@ -398,13 +398,13 @@ def worker_job(worker_id):
 
 def cron_worker_job(cron_worker_index, scheduled_job):
     import copy
-    import math
-    import time
+    from datetime import datetime
 
-    timestamp = math.floor(time.time())
+    now = datetime.now()
+    timestamp = now.strftime('%Y%m%d_%H%M%S')
 
     old_job_id = scheduled_job['job_id']
-    new_job_id = f'{old_job_id}-{timestamp}'
+    new_job_id = f'{old_job_id}_{timestamp}'
 
     _create_scheduled_run_directory(old_job_id, new_job_id)
     scheduled_job_run = _create_scheduled_run_job_spec(scheduled_job, new_job_id)

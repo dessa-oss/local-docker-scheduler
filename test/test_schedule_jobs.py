@@ -197,7 +197,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
         submitted_job_dirs = glob(f'working_dir/{job_bundle_name}*')
         self.assertIn(len(runs_from_scheduled_job), [3, 4])
         self.assertIn(len(submitted_job_dirs), [1, 2])
@@ -361,7 +361,7 @@ class TestScheduleJobs(unittest.TestCase):
         job_bundle_name, _ = self._submit_and_schedule_job()
         self._delete_scheduled_job(job_bundle_name)
         time.sleep(8)
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
         self.assertIn(len(runs_from_scheduled_job), [0, 1])
 
     def test_update_job_schedule_for_nonexistent_job_returns_404(self):
@@ -383,7 +383,7 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._update_job_schedule(job_bundle_name, new_schedule)
 
         time.sleep(10)
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [1, 2])
@@ -429,7 +429,7 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._pause_job(job_bundle_name)
 
         time.sleep(7)
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [0, 1])
@@ -447,7 +447,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
@@ -468,7 +468,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
@@ -487,7 +487,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}-*')
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
@@ -523,8 +523,8 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(6)
 
-        runs_from_scheduled_job_0 = glob(f'archives_dir/{job_bundle_0}-*')
-        runs_from_scheduled_job_1 = glob(f'archives_dir/{job_bundle_1}-*')
+        runs_from_scheduled_job_0 = glob(f'archives_dir/{job_bundle_0}_*')
+        runs_from_scheduled_job_1 = glob(f'archives_dir/{job_bundle_1}_*')
 
         self.assertIn(len(runs_from_scheduled_job_0), [0, 1])
         self.assertIn(len(runs_from_scheduled_job_1), [2, 3])
@@ -553,10 +553,10 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(6)
 
-        runs_from_scheduled_job_0 = glob(f'archives_dir/{job_bundle_0}-*')
+        runs_from_scheduled_job_0 = glob(f'archives_dir/{job_bundle_0}_*')
         self.assertIn(len(runs_from_scheduled_job_0), [2, 3])
 
-        runs_from_scheduled_job_1 = glob(f'archives_dir/{job_bundle_1}-*')
+        runs_from_scheduled_job_1 = glob(f'archives_dir/{job_bundle_1}_*')
         self.assertIn(len(runs_from_scheduled_job_1), [2, 3])
 
         jobs_information = self._scheduled_jobs().json()
@@ -631,5 +631,16 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual(expected_schedule, job_bundle_1_content['schedule'])
         self.assertLessEqual(job_bundle_1_content['next_run_time'] - now, 4)
         self.assertEqual('active', job_bundle_1_content['status'])
+
+    def test_scheduled_job_run_has_human_readable_timestamp(self):
+        from glob import glob
+        import time
+
+        job_bundle_name, _ = self._submit_and_schedule_job()
+
+        time.sleep(8)
+
+        runs_from_scheduled_job = glob(f"archives_dir/{job_bundle_name}_{'[0-9]'*8}_{'[0-9]'*6}")
+        self.assertIn(len(runs_from_scheduled_job), [3, 4])
 
 
