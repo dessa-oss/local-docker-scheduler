@@ -22,7 +22,6 @@ def get_app():
 
     from tracker_client_plugins import tracker_clients
     import docker_worker_pool
-    from local_docker_scheduler import routes
     from docker_worker_pool import get_cron_workers, DockerWorker
 
     global _app

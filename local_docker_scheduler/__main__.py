@@ -6,6 +6,7 @@ Written by Eric lee <e.lee@dessa.com>, 08 2019
 """
 
 from local_docker_scheduler import get_app
+import local_docker_scheduler.routes # so that the routes are loaded into the app
 from db import gpu_pool
 import logging
 import argparse
