@@ -6,6 +6,14 @@ then
     exit 1
 fi
 
+if [[ -z "${FOUNDATIONS_HOME}" ]]
+then
+    echo "please set FOUNDATIONS_HOME"
+    exit 1
+fi
+
+canonical_home=$(cd ${FOUNDATIONS_HOME} && pwd)
+
 cat > database.config.yaml << EOF
 queue:
   type: redis_connection.RedisList
@@ -39,12 +47,15 @@ redis_tracker_client:
   port: 6379
 EOF
 
-mkdir -p /tmp/archives /tmp/working_dir
+archives_dir=${canonical_home}/job_data
+working_dir=${canonical_home}/config/local_docker_scheduler/work_dir
+
+mkdir -p ${archives_dir} ${working_dir}
 
 docker run --rm -d --name local-docker-scheduler \
     -p 5000:5000 \
-    -v /tmp/archives:/archives \
-    -v /tmp/working_dir:/working_dir \
+    -v ${archives_dir}:/archives \
+    -v ${working_dir}:/working_dir \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ${HOME}/.docker:/root/.docker \
     -v $(pwd -P)/tracker_client_plugins.yaml:/app/local-docker-scheduler/tracker_client_plugins.yaml \
