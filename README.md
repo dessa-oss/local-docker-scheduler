@@ -23,7 +23,7 @@ Please see sections below on details on configuration files
 
 ## Tracker client plugins configuration
 
-Placing a `tracker_client_plugins.yaml` in the project directory will make the scheduler load the designated plugins at start.  
+Placing a `tracker_client_plugins.config.yaml` in the project directory will make the scheduler load the designated plugins at start.  
 Format of the yaml file should be:
 ```
 name_of_plugin1:
