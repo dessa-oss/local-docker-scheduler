@@ -11,7 +11,7 @@ If using docker to run, you will need to mount the following volumes:
 ```
 -v <docker socket>:/var/run/docker.sock
 -v <docker configuration>:/root/.docker
--v <path to tracker_client_plugins.config.yaml>:/app/local-docker-scheduler/tracker_client_plugins.config.yaml
+-v <path to tracker_client_plugins.config.yaml>:/app/local-docker-scheduler/tracker_client_plugins.yaml
 -v <path to database.config.yaml>:/app/local-docker-scheduler/database.config.yaml
 ```
 
@@ -23,7 +23,7 @@ Please see sections below on details on configuration files
 
 ## Tracker client plugins configuration
 
-Placing a `tracker_client_plugins.config.yaml` in the project directory will make the scheduler load the designated plugins at start.  
+Placing a `tracker_client_plugins.yaml` in the project directory will make the scheduler load the designated plugins at start.  
 Format of the yaml file should be:
 ```
 name_of_plugin1:
