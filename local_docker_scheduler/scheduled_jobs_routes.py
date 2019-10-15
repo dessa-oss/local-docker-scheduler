@@ -12,40 +12,42 @@ from .constants import _WORKING_DIR, _ARCHIVE_DIR
 
 app = get_app()
 
-@app.route('/scheduled_jobs', methods=['GET', 'POST'])
+@app.route('/scheduled_jobs', methods=['GET'])
 def scheduled_jobs():
-    if request.method == 'POST':
-        scheduled_job = request.json
-        try:
-            job_id = scheduled_job['job_id']
-            spec = scheduled_job['spec']
-            schedule = scheduled_job['schedule']
-        except KeyError:
-            return "Job must contain 'job_id', 'spec', 'schedule'", 400
+    current_scheduled_jobs = docker_worker_pool.get_cron_workers()
+    return jsonify({worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values()})
 
-        if not isinstance(schedule, dict) or job_id is None or not isinstance(spec, dict):
-            return "Job must contain valid 'job_id', 'spec', 'schedule'", 400
-        
-        if len(schedule.items()) == 0:
-            return "Invalid job schedule", 400
+@app.route('/scheduled_jobs', methods=['POST'])
+def create_scheduled_job():
+    scheduled_job = request.json
+    try:
+        job_id = scheduled_job['job_id']
+        spec = scheduled_job['spec']
+        schedule = scheduled_job['schedule']
+    except KeyError:
+        return "Job must contain 'job_id', 'spec', 'schedule'", 400
 
-        if not _job_directory_exists(job_id):
-            return 'Cannot schedule a job that has no uploaded bundle', 409
+    if not isinstance(schedule, dict) or job_id is None or not isinstance(spec, dict):
+        return "Job must contain valid 'job_id', 'spec', 'schedule'", 400
 
-        scheduled_job = {'job_id': job_id,
-                            'spec': spec,
-                            'schedule': schedule,
-                            'metadata': scheduled_job.get('metadata', {}),
-                            'gpu_spec': scheduled_job.get('gpu_spec', {})}
+    if len(schedule.items()) == 0:
+        return "Invalid job schedule", 400
 
-        try:
-            docker_worker_pool.add_cron_worker(scheduled_job)
-            return make_response(jsonify(job_id), 201)
-        except ResourceWarning:
-            return "Maximum number of scheduled jobs reached", 400
-    else:
-        current_scheduled_jobs = docker_worker_pool.get_cron_workers()
-        return jsonify({worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values()})
+    if not _job_directory_exists(job_id):
+        return 'Cannot schedule a job that has no uploaded bundle', 409
+
+    scheduled_job = {'job_id': job_id,
+                        'spec': spec,
+                        'schedule': schedule,
+                        'metadata': scheduled_job.get('metadata', {}),
+                        'gpu_spec': scheduled_job.get('gpu_spec', {})}
+
+    try:
+        docker_worker_pool.add_cron_worker(scheduled_job)
+        return make_response(jsonify(job_id), 201)
+    except ResourceWarning:
+        return "Maximum number of scheduled jobs reached", 400
+
 
 @app.route('/scheduled_jobs/<string:job_id>', methods=['DELETE'])
 def delete_scheduled_job(job_id):
