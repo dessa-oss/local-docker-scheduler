@@ -19,7 +19,7 @@ pipeline{
         stage('Run Tests') {
             steps {
                 container("python3") {
-                    sh './ci_install_requirements'
+                    sh './ci_install_requirements.sh'
                     sh 'python -m unittest test'
                 }
             }
