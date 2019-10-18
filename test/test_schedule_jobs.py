@@ -470,6 +470,9 @@ class TestScheduleJobs(unittest.TestCase):
 
         runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
 
+        print('YOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO')
+        print(glob('archives_dir/*'))
+
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
 
