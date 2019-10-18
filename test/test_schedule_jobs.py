@@ -139,11 +139,13 @@ class TestScheduleJobs(unittest.TestCase):
                 'volumes': {
                     f'{cwd}/working_dir/{job_bundle_name}': {
                         'bind': '/job',
-                        'mode': 'rw'
+                        'mode': 'rw',
+                        'propagation': 'shared'
                     },
                     f'{cwd}/archives_dir': {
                         'bind': '/job/job_archive',
-                        'mode': 'rw'
+                        'mode': 'rw',
+                        'propagation': 'shared'
                     }
                 },
                 'working_dir': '/job',
@@ -156,7 +158,7 @@ class TestScheduleJobs(unittest.TestCase):
                     '-c'
                 ],
                 'command': [
-                    'chmod 777 ${ENTRYPOINT} && python ${ENTRYPOINT} && chmod -R a+rw /job/job_archive'
+                    'python ${ENTRYPOINT} && chmod -R a+rw /job/job_archive'
                 ]
             },
             'metadata': {'project_name': 'test', 'username': 'shaz'},
