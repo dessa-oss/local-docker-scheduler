@@ -22,8 +22,8 @@ class TestScheduleJobs(unittest.TestCase):
             self._cleanup_jobs()
         finally:
             self._stop_server()
-            shutil.rmtree('archives_dir')
-            shutil.rmtree('working_dir')
+            # shutil.rmtree('archives_dir')
+            # shutil.rmtree('working_dir')
 
     def _start_server(self):
         from subprocess import Popen
@@ -469,9 +469,6 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(8)
 
         runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
-
-        print('YOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO')
-        print(glob('archives_dir/*'))
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
