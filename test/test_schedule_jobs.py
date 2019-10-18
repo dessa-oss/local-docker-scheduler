@@ -138,7 +138,7 @@ class TestScheduleJobs(unittest.TestCase):
                 'image': 'python:3.6-alpine',
                 'volumes': {
                     f'{cwd}/working_dir/{job_bundle_name}': {
-                        'bind': '/job',
+                        'bind': '/job/job_source',
                         'mode': 'rw'
                     },
                     f'{cwd}/archives_dir': {
@@ -146,7 +146,7 @@ class TestScheduleJobs(unittest.TestCase):
                         'mode': 'rw'
                     }
                 },
-                'working_dir': '/job',
+                'working_dir': '/job/job_source',
                 'environment': {
                     'JOB_ID': job_bundle_name,
                     'ENTRYPOINT': 'whatever_i_want.py'
