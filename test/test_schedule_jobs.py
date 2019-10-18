@@ -21,9 +21,10 @@ class TestScheduleJobs(unittest.TestCase):
         try:
             self._cleanup_jobs()
         finally:
-            self._stop_server()
-            shutil.rmtree('archives_dir')
-            shutil.rmtree('working_dir')
+            pass
+            # self._stop_server()
+            # shutil.rmtree('archives_dir')
+            # shutil.rmtree('working_dir')
 
     def _start_server(self):
         from subprocess import Popen
