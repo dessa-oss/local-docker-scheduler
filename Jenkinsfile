@@ -23,21 +23,33 @@ pipeline{
                 }
             }
         }
-        // stage('Start Local Scheduler') {
-        //     steps {
-        //         container("foundations-local-scheduler"){
-        //             // sh "python3 -m local_docker_scheduler -p 5000 &"
-        //             sh "echo hello"
-        //         }
-        //     }
-        // }
         stage('Run Tests') {
             steps {
                 container("python3") {
                     sh './ci_install_requirements.sh'
-                    sh 'python -m unittest test'
+                    sh 'python -m unittest test -f'
                 }
             }
+        }
+    }
+    post {
+        failure {
+            script {
+                def output_logs = String.join('\n', currentBuild.rawBuild.getLog(200))
+                def attachments = [
+                    [
+                        pretext: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
+                        text: output_logs,
+                        fallback: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
+                        color: '#FF0000'
+                    ]
+                ]
+
+                slackSend(channel: '#f9s-builds', attachments: attachments)
+            }
+        }
+        success {
+            slackSend color: '#00FF00', message: 'Build succeeded for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.'
         }
     }
 }
