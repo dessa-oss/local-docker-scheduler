@@ -16,6 +16,13 @@ pipeline{
                 }
             }
         }
+        stage('Start Local Scheduler') {
+            steps {
+                container("foundations-local-scheduler"){
+                    sh "python3 -m local_docker_scheduler -p 5000"
+                }
+            }
+        }
         stage('Run Tests') {
             steps {
                 container("python3") {
