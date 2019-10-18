@@ -119,7 +119,7 @@ class DockerWorker:
                 failed_jobs[job_id] = job
                 tracker_clients.failed(job)
 
-            self._cleanup_job(container, job_id, remove_working_dir)
+            # self._cleanup_job(container, job_id, remove_working_dir)
 
         finally:
             self._delete_running_job(job_id)
