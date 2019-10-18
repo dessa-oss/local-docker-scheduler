@@ -16,17 +16,17 @@ pipeline{
                 }
             }
         }
-        stage('Create Configs') {
+        stage('Setup') {
             steps {
-                container("foundations-local-scheduler"){
+                container("python3") {
                     sh "./setup_filesystem.sh"
+                    sh './ci_install_requirements.sh'                    
                 }
             }
         }
         stage('Run Tests') {
             steps {
                 container("python3") {
-                    sh './ci_install_requirements.sh'
                     sh 'python -m unittest test -f'
                 }
             }
