@@ -19,6 +19,8 @@ pipeline{
         stage('Create Configs') {
             steps {
                 container("foundations-local-scheduler"){
+                    sh "pwd"
+                    sh "ls"
                     sh "./create_ci_config.sh"
                 }
             }
