@@ -38,7 +38,7 @@ class TestScheduleJobs(unittest.TestCase):
         self._server_process.terminate()
         self._server_process.wait()
 
-    def _generate_tarball(self, job_tar_source_dir):
+    def _generate_tarball(self, job_tar_source_dir, job_id_prefix=None):
         import os
         import os.path as path
         import shutil
@@ -50,7 +50,10 @@ class TestScheduleJobs(unittest.TestCase):
 
         cwd = os.getcwd()
         dir_suffix = str(uuid.uuid4())
-        job_id = f'{job_tar_source_dir}-{dir_suffix}'
+        if job_id_prefix:
+            job_id = f'{job_id_prefix}-{job_tar_source_dir}-{dir_suffix}'
+        else:
+            job_id = f'{job_tar_source_dir}-{dir_suffix}'
         temp_dir = path.join(temp_dir_root, job_id)
         tar_file = path.join(temp_dir_root, f'{job_id}.tgz')
 
@@ -80,10 +83,10 @@ class TestScheduleJobs(unittest.TestCase):
 
         return response
 
-    def _create_job(self, job_tar_source_dir):
+    def _create_job(self, job_tar_source_dir, job_id_prefix=None):
         import os.path as path
 
-        job_tar_path = self._generate_tarball('fake_job')
+        job_tar_path = self._generate_tarball('fake_job', job_id_prefix)
         job_bundle_name = path.basename(job_tar_path)[:-4]
 
         self._upload_job_bundle(job_tar_path)
@@ -165,8 +168,8 @@ class TestScheduleJobs(unittest.TestCase):
             }
         }
 
-    def _submit_and_schedule_job(self):
-        job_bundle_name = self._create_job('fake_job')
+    def _submit_and_schedule_job(self, job_id_prefix=None):
+        job_bundle_name = self._create_job('fake_job', job_id_prefix)
         job_payload = self._job_payload(job_bundle_name)
         response = self._schedule_job(job_payload)
         return job_bundle_name, response
@@ -644,3 +647,19 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertIn(len(runs_from_scheduled_job), [3, 4])
 
 
+    def test_filtered_get_scheduled_job_returns_correct_information(self):
+        project_name = 'test_project'
+        job_bundle_0, _ = self._submit_and_schedule_job()
+        job_bundle_1, _ = self._submit_and_schedule_job()
+
+        job_bundle_3, _ = self._submit_and_schedule_job(job_id_prefix=project_name)
+        job_bundle_4, _ = self._submit_and_schedule_job(job_id_prefix=project_name)
+
+        import requests
+        response = requests.get(f'http://localhost:5000/scheduled_jobs?job_id_prefix={project_name}').json()
+        job_ids = response.keys()
+        has_project_name = True
+        for job_id in job_ids:
+            has_project_name = project_name in job_id and has_project_name
+
+        self.assertTrue(has_project_name)

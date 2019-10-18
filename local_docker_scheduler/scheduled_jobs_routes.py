@@ -15,7 +15,16 @@ app = get_app()
 @app.route('/scheduled_jobs', methods=['GET'])
 def scheduled_jobs():
     current_scheduled_jobs = docker_worker_pool.get_cron_workers()
-    return jsonify({worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values()})
+    full_list_of_scheduled_jobs = {worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values()}
+
+    job_id_prefix = request.args.get('job_id_prefix')
+    scheduled_jobs = {}
+    if job_id_prefix is not None:
+        for scheduled_job_id, details  in full_list_of_scheduled_jobs.items():
+            if job_id_prefix in scheduled_job_id:
+                scheduled_jobs.update({scheduled_job_id: details})
+        return jsonify(scheduled_jobs)
+    return jsonify(full_list_of_scheduled_jobs)
 
 @app.route('/scheduled_jobs', methods=['POST'])
 def create_scheduled_job():
