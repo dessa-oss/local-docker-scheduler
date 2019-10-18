@@ -156,7 +156,7 @@ class TestScheduleJobs(unittest.TestCase):
                     '-c'
                 ],
                 'command': [
-                    'python ${ENTRYPOINT} && chmod -R a+rw /job/job_archive'
+                    'ls && ls .. && python ${ENTRYPOINT} && chmod -R a+rw /job/job_archive'
                 ]
             },
             'metadata': {'project_name': 'test', 'username': 'shaz'},
