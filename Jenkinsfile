@@ -16,11 +16,18 @@ pipeline{
                 }
             }
         }
-        stage('Start Local Scheduler') {
+        stage('Create Configs') {
             steps {
                 container("foundations-local-scheduler"){
                     sh "./create_ci_config.sh"
-                    sh "python3 -m local_docker_scheduler -p 5000 &"
+                }
+            }
+        }
+        stage('Start Local Scheduler') {
+            steps {
+                container("foundations-local-scheduler"){
+                    // sh "python3 -m local_docker_scheduler -p 5000 &"
+                    sh "echo hello"
                 }
             }
         }
