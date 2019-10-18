@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [[ -z "${LOCAL_DOCKER_SCHEDULER_HOST}" ]]
 then
