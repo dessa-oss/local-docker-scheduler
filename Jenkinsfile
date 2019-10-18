@@ -19,7 +19,7 @@ pipeline{
         stage('Create Configs') {
             steps {
                 container("foundations-local-scheduler"){
-                    sh "./create_ci_config.sh"
+                    sh "./setup_filesystem.sh"
                 }
             }
         }
