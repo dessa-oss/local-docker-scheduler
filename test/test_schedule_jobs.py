@@ -646,17 +646,34 @@ class TestScheduleJobs(unittest.TestCase):
         runs_from_scheduled_job = glob(f"archives_dir/{job_bundle_name}_{'[0-9]'*8}_{'[0-9]'*6}")
         self.assertIn(len(runs_from_scheduled_job), [3, 4])
 
-
-    def test_filtered_get_scheduled_job_returns_correct_information(self):
-        project_name = 'test_project'
+    def _create_jobs_with_and_without_prefix(self, prefix):
+        
         job_bundle_0, _ = self._submit_and_schedule_job()
         job_bundle_1, _ = self._submit_and_schedule_job()
 
-        job_bundle_3, _ = self._submit_and_schedule_job(job_id_prefix=project_name)
-        job_bundle_4, _ = self._submit_and_schedule_job(job_id_prefix=project_name)
+        job_bundle_3, _ = self._submit_and_schedule_job(job_id_prefix=prefix)
+        job_bundle_4, _ = self._submit_and_schedule_job(job_id_prefix=prefix)
+
+    def test_filtered_get_scheduled_job_returns_correct_information(self):
+        project_name = 'test_project'
+        self._create_jobs_with_and_without_prefix(project_name)
 
         import requests
         response = requests.get(f'http://localhost:5000/scheduled_jobs?job_id_prefix={project_name}').json()
+        job_ids = response.keys()
+        has_project_name = True
+        for job_id in job_ids:
+            has_project_name = project_name in job_id and has_project_name
+
+        self.assertTrue(has_project_name)
+
+    def test_filtered_get_scheduled_job_returns_correct_information_when_submitted_in_the_body(self):
+        project_name = 'test_project'
+        self._create_jobs_with_and_without_prefix(project_name)
+
+        import requests
+        response = requests.get(f'http://localhost:5000/scheduled_jobs', json={'job_id_prefix': project_name}).json()
+        
         job_ids = response.keys()
         has_project_name = True
         for job_id in job_ids:
