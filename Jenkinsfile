@@ -19,7 +19,7 @@ pipeline{
         stage('Start Local Scheduler') {
             steps {
                 container("foundations-local-scheduler"){
-                    sh "./create_ci_config.sh"
+                    sh "sh create_ci_config.sh"
                     sh "python3 -m local_docker_scheduler -p 5000 &"
                 }
             }
