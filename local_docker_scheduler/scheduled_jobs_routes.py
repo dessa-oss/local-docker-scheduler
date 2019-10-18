@@ -57,7 +57,7 @@ def delete_scheduled_job(job_id):
     except Exception as ex:
         return f'Scheduled job {job_id} not found', 404
 
-@app.route('/scheduled_jobs/<string:job_id>/', methods=['PUT'])
+@app.route('/scheduled_jobs/<string:job_id>', methods=['PUT'])
 def update_scheduled_job_status(job_id):
     from datetime import datetime
     from tzlocal import get_localzone
