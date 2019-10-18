@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [[ -z "${LOCAL_DOCKER_SCHEDULER_HOST}" ]]
 then
@@ -12,6 +12,7 @@ then
     exit 1
 fi
 
+mkdir -p ${FOUNDATIONS_HOME}
 canonical_home=$(cd ${FOUNDATIONS_HOME} && pwd)
 
 cat > database.config.yaml << EOF
