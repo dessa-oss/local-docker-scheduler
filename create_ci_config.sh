@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 cat > database.config.yaml << EOF
 queue:
