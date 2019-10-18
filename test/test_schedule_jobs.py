@@ -22,8 +22,8 @@ class TestScheduleJobs(unittest.TestCase):
             self._cleanup_jobs()
         finally:
             self._stop_server()
-            # shutil.rmtree('archives_dir')
-            # shutil.rmtree('working_dir')
+            shutil.rmtree('archives_dir')
+            shutil.rmtree('working_dir')
 
     def _start_server(self):
         from subprocess import Popen
@@ -139,13 +139,11 @@ class TestScheduleJobs(unittest.TestCase):
                 'volumes': {
                     f'{cwd}/working_dir/{job_bundle_name}': {
                         'bind': '/job',
-                        'mode': 'rw',
-                        'propagation': 'shared'
+                        'mode': 'rw'
                     },
                     f'{cwd}/archives_dir': {
                         'bind': '/job/job_archive',
-                        'mode': 'rw',
-                        'propagation': 'shared'
+                        'mode': 'rw'
                     }
                 },
                 'working_dir': '/job',
