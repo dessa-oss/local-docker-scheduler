@@ -16,25 +16,25 @@ pipeline{
                 }
             }
         }
-        stage('Create Configs') {
-            steps {
-                container("foundations-local-scheduler"){
-                    ws("${WORKSPACE}/cal-foundations-scheduler_master") {
-                        sh "pwd"
-                        sh "ls"
-                        sh "cd /app/local-docker-scheduler/workspace/cal-foundations-scheduler_master && ./create_ci_config.sh"
-                    }
-                }
-            }
-        }
-        stage('Start Local Scheduler') {
-            steps {
-                container("foundations-local-scheduler"){
-                    // sh "python3 -m local_docker_scheduler -p 5000 &"
-                    sh "echo hello"
-                }
-            }
-        }
+        // stage('Create Configs') {
+        //     steps {
+        //         container("foundations-local-scheduler"){
+        //             ws("${WORKSPACE}/cal-foundations-scheduler_master") {
+        //                 sh "pwd"
+        //                 sh "ls"
+        //                 sh "cd /app/local-docker-scheduler/workspace/cal-foundations-scheduler_master && ./create_ci_config.sh"
+        //             }
+        //         }
+        //     }
+        // }
+        // stage('Start Local Scheduler') {
+        //     steps {
+        //         container("foundations-local-scheduler"){
+        //             // sh "python3 -m local_docker_scheduler -p 5000 &"
+        //             sh "echo hello"
+        //         }
+        //     }
+        // }
         stage('Run Tests') {
             steps {
                 container("python3") {
