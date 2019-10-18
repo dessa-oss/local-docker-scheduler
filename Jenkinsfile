@@ -22,7 +22,7 @@ pipeline{
                     ws("${WORKSPACE}/cal-foundations-scheduler_master") {
                         sh "pwd"
                         sh "ls"
-                        sh "./create_ci_config.sh"
+                        sh "cd .. && ./create_ci_config.sh"
                     }
                 }
             }
