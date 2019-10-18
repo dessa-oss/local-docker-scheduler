@@ -21,7 +21,6 @@ class TestScheduleJobs(unittest.TestCase):
         try:
             self._cleanup_jobs()
         finally:
-            pass
             self._stop_server()
             shutil.rmtree('archives_dir')
             shutil.rmtree('working_dir')
