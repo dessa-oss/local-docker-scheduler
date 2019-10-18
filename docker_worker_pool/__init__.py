@@ -437,7 +437,7 @@ def _rewrite_volumes(spec_volumes, new_job_id):
     new_volumes = {}
 
     for host_path, volume_information in spec_volumes.items():
-        if volume_information['bind'] == '/job/job_source':
+        if volume_information['bind'] == '/job':
             host_path = path.join(path.dirname(host_path), new_job_id)
 
         new_volumes[host_path] = volume_information
