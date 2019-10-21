@@ -29,7 +29,6 @@ class TestScheduleJobs(unittest.TestCase):
         archive_files = glob.glob(f'{self.archives_dir_path}/*')
         working_dir_files = glob.glob(f'{self.working_dir_path}/*')
         for f in archive_files + working_dir_files:
-            print(f)
             shutil.rmtree(f)
 
     def _start_server(self):
