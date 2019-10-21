@@ -8,3 +8,4 @@ archives
 working_dir
 archives_dir
 .vscode
+.env
