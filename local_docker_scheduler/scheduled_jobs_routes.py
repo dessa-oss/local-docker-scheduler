@@ -145,7 +145,8 @@ def _scheduled_job_response_entry(worker):
     return {
         'next_run_time': next_run_timestamp,
         'schedule': _schedule_dict(worker.apscheduler_job.trigger),
-        'status': status
+        'status': status,
+        'properties': worker.apscheduler_job.args[1]
     }
 
 def _job_directory_exists(job_id):

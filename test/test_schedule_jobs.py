@@ -165,7 +165,8 @@ class TestScheduleJobs(unittest.TestCase):
             'metadata': {'project_name': 'test', 'username': 'shaz'},
             'schedule': {
                 'second': '*/2'
-            }
+            },
+            'gpu_spec': {}
         }
 
     def _submit_and_schedule_job(self, job_id_prefix=None):
@@ -629,11 +630,13 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual(expected_schedule, job_bundle_0_content['schedule'])
         self.assertIsNone(job_bundle_0_content['next_run_time'])
         self.assertEqual('paused', job_bundle_0_content['status'])
+        self.assertEqual(self._job_payload(job_bundle_0), job_bundle_0_content['properties'])
 
         self.assertEqual([job_bundle_1], list(response_1_json.keys()))
         self.assertEqual(expected_schedule, job_bundle_1_content['schedule'])
-        self.assertLessEqual(job_bundle_1_content['next_run_time'] - now, 4)
+        self.assertLessEqual(job_bundle_1_content['next_run_time'] - now, 9)
         self.assertEqual('active', job_bundle_1_content['status'])
+        self.assertEqual(self._job_payload(job_bundle_1), job_bundle_1_content['properties'])
 
     def test_scheduled_job_run_has_human_readable_timestamp(self):
         from glob import glob
