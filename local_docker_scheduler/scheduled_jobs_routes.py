@@ -27,12 +27,11 @@ def scheduled_jobs():
     full_list_of_scheduled_jobs = {worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values()}
     job_id_prefix = _check_for_job_id_prefix()
 
-    scheduled_jobs = {}
-    if job_id_prefix is not None:
-        for scheduled_job_id, details  in full_list_of_scheduled_jobs.items():
-            if job_id_prefix in scheduled_job_id:
-                scheduled_jobs.update({scheduled_job_id: details})
+    if request.args:
+        project = request.args.get('project')
+        scheduled_jobs = {job: job_details for job, job_details in full_list_of_scheduled_jobs.items() if job_details['properties']['metadata']['project_name'] == project}
         return jsonify(scheduled_jobs)
+
     return jsonify(full_list_of_scheduled_jobs)
 
 @app.route('/scheduled_jobs', methods=['POST'])

@@ -337,7 +337,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         for job_bundle in [job_bundle_0, job_bundle_1]:
             self.assertEqual(expected_schedule, response_json[job_bundle]['schedule'])
-            self.assertLessEqual(response_json[job_bundle]['next_run_time'] - now, 4)
+            self.assertLessEqual(response_json[job_bundle]['next_run_time'] - now, 9)
 
     def test_schedule_job_with_no_bundle_gives_409_conflict(self):
         job_bundle_name = 'fake_job'
@@ -713,7 +713,7 @@ class TestScheduleJobs(unittest.TestCase):
         self._create_jobs_with_and_without_prefix(project_name)
 
         import requests
-        response = requests.get(f'http://localhost:5000/scheduled_jobs?job_id_prefix={project_name}').json()
+        response = requests.get(f'http://localhost:5000/scheduled_jobs?project={project_name}').json()
         job_ids = response.keys()
         has_project_name = True
         for job_id in job_ids:
@@ -726,7 +726,7 @@ class TestScheduleJobs(unittest.TestCase):
         self._create_jobs_with_and_without_prefix(project_name)
 
         import requests
-        response = requests.get(f'http://localhost:5000/scheduled_jobs', json={'job_id_prefix': project_name}).json()
+        response = requests.get(f'http://localhost:5000/scheduled_jobs', params={'project': project_name}).json()
         
         job_ids = response.keys()
         has_project_name = True
