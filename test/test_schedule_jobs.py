@@ -195,9 +195,12 @@ class TestScheduleJobs(unittest.TestCase):
         job_payload = self._job_payload(job_bundle_name)
 
         response = self._schedule_job(job_payload)
+        job_info = self._scheduled_job(job_bundle_name)
+        job_content = job_info.json()[job_bundle_name]
 
         self.assertEqual(201, response.status_code)
         self.assertEqual(f'"{job_bundle_name}"\n', response.text)
+        self.assertEqual('active', job_content['status'])
 
         time.sleep(8)
 
@@ -217,7 +220,7 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._schedule_job(job_payload)
 
         self.assertEqual(400, response.status_code)
-        self.assertEqual("Job must contain 'job_id', 'spec', 'schedule'", response.text)
+        self.assertEqual("Job must contain 'job_id', 'spec'", response.text)
 
     def test_schedule_job_with_valid_payload_structure_but_invalid_payload_contents_400(self):
         import time
@@ -232,7 +235,7 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._schedule_job(job_payload)
 
         self.assertEqual(400, response.status_code)
-        self.assertEqual("Job must contain valid 'job_id', 'spec', 'schedule'", response.text)
+        self.assertEqual("Job must contain valid 'job_id', 'spec'", response.text)
 
     def test_schedule_job_with_valid_payload_structure_but_job_id_None_returns_400(self):
         import os
@@ -247,7 +250,7 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._schedule_job(job_payload)
 
         self.assertEqual(400, response.status_code)
-        self.assertEqual("Job must contain valid 'job_id', 'spec', 'schedule'", response.text)
+        self.assertEqual("Job must contain valid 'job_id', 'spec'", response.text)
 
     def test_schedule_job_with_valid_payload_structure_but_spec_None_returns_400(self):
         import os
@@ -261,9 +264,9 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._schedule_job(job_payload)
 
         self.assertEqual(400, response.status_code)
-        self.assertEqual("Job must contain valid 'job_id', 'spec', 'schedule'", response.text)
+        self.assertEqual("Job must contain valid 'job_id', 'spec'", response.text)
 
-    def test_schedule_job_with_valid_payload_structure_but_schedule_empty_returns_400(self):
+    def test_schedule_job_with_valid_payload_structure_but_schedule_empty_returns_201_with_paused_job(self):
         import os
         import time
 
@@ -273,9 +276,13 @@ class TestScheduleJobs(unittest.TestCase):
         job_payload['schedule'] = {}
 
         response = self._schedule_job(job_payload)
+        job_info = self._scheduled_job(job_bundle_name)
+        job_content = job_info.json()[job_bundle_name]
 
-        self.assertEqual(400, response.status_code)
-        self.assertEqual("Invalid job schedule", response.text)
+        self.assertEqual(201, response.status_code)
+        self.assertEqual(f'"{job_bundle_name}"\n', response.text)
+        self.assertIsNone(job_content['next_run_time'])
+        self.assertEqual('paused', job_content['status'])
 
     def test_schedule_too_many_jobs_returns_400(self):
         for _ in range(10):
@@ -391,6 +398,37 @@ class TestScheduleJobs(unittest.TestCase):
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [1, 2])
+
+    def test_resuming_updated_job_runs_on_new_schedule(self):
+        from glob import glob
+        import time
+
+        job_bundle_name = self._create_job('fake_job')
+        job_payload = self._job_payload(job_bundle_name)
+        job_payload['schedule'] = {}
+
+        response = self._schedule_job(job_payload)
+        time.sleep(4)
+
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+
+        self.assertEqual(201, response.status_code)
+        self.assertEqual(0, len(runs_from_scheduled_job))
+
+        new_schedule = {
+            'second': '*/5'
+        }
+
+        update_response = self._update_job_schedule(job_bundle_name, new_schedule)
+        resume_response = self._resume_job(job_bundle_name)
+        time.sleep(7)
+
+        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+
+        self.assertEqual(204, update_response.status_code)
+        self.assertEqual(204, resume_response.status_code)
+        self.assertIn(len(runs_from_scheduled_job), [1, 2])
+
 
     def test_update_job_schedule_with_empty_schedule_returns_400(self):
         from glob import glob

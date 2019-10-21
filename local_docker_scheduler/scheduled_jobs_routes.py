@@ -41,15 +41,12 @@ def create_scheduled_job():
     try:
         job_id = scheduled_job['job_id']
         spec = scheduled_job['spec']
-        schedule = scheduled_job['schedule']
+        schedule = scheduled_job.get('schedule', {})
     except KeyError:
-        return "Job must contain 'job_id', 'spec', 'schedule'", 400
+        return "Job must contain 'job_id', 'spec'", 400
 
     if not isinstance(schedule, dict) or job_id is None or not isinstance(spec, dict):
-        return "Job must contain valid 'job_id', 'spec', 'schedule'", 400
-
-    if len(schedule.items()) == 0:
-        return "Invalid job schedule", 400
+        return "Job must contain valid 'job_id', 'spec'", 400
 
     if not _job_directory_exists(job_id):
         return 'Cannot schedule a job that has no uploaded bundle', 409
@@ -62,6 +59,11 @@ def create_scheduled_job():
 
     try:
         docker_worker_pool.add_cron_worker(scheduled_job)
+        if not schedule:
+            worker = docker_worker_pool.cron_worker_by_job_id(job_id)
+            job = worker.apscheduler_job
+            job.pause()
+            job.next_run_time = None
         return make_response(jsonify(job_id), 201)
     except ResourceWarning:
         return "Maximum number of scheduled jobs reached", 400
