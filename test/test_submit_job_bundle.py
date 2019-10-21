@@ -7,8 +7,12 @@ class TestSubmitJobBundle(unittest.TestCase):
         import os
         from subprocess import Popen
         import time
+        import uuid
 
-        cls.working_dir_path = '/tmp/local_docker_scheduler/working_dir' 
+        random_string = str(uuid.uuid4())[:8] 
+
+        cls.working_dir_path = f'/tmp/local_docker_scheduler/working_dir_{random_string}'
+        os.makedirs(cls.working_dir_path)
 
         env = os.environ.copy()
         env['WORKING_DIR'] = cls.working_dir_path

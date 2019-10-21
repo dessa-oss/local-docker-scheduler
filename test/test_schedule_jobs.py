@@ -1,6 +1,9 @@
 import unittest
+import uuid
 
 class TestScheduleJobs(unittest.TestCase):
+
+    random_string = str(uuid.uuid4())[:8]
 
     def setUp(self):
         import docker
@@ -9,9 +12,13 @@ class TestScheduleJobs(unittest.TestCase):
 
         client = docker.from_env()
         client.images.pull('python:3.6-alpine')
+        
 
-        self.archives_dir_path = '/tmp/local_docker_scheduler/archives_dir'
-        self.working_dir_path = '/tmp/local_docker_scheduler/working_dir'
+        self.archives_dir_path = f'/tmp/local_docker_scheduler/archives_dir_{self.random_string}'
+        self.working_dir_path = f'/tmp/local_docker_scheduler/working_dir_{self.random_string}'
+
+        os.makedirs(self.archives_dir_path, exist_ok=True)
+        os.makedirs(self.working_dir_path, exist_ok=True)
 
         self._start_server()
         time.sleep(1)
@@ -561,7 +568,7 @@ class TestScheduleJobs(unittest.TestCase):
     def test_scheduler_persists_scheduled_and_paused_jobs(self):
         from glob import glob
         import time
-
+        
         job_bundle_0, _ = self._submit_and_schedule_job()
         self._pause_job(job_bundle_0)
 
@@ -571,7 +578,7 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(1)
         self._start_server()
 
-        time.sleep(6)
+        time.sleep(5)
 
         runs_from_scheduled_job_0 = glob(f'{self.archives_dir_path}/{job_bundle_0}_*')
         runs_from_scheduled_job_1 = glob(f'{self.archives_dir_path}/{job_bundle_1}_*')
