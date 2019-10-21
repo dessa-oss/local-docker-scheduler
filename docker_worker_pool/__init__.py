@@ -313,9 +313,10 @@ def add_cron_worker(scheduled_job):
         raise ResourceWarning("Maximum number of scheduled jobs reached. Unable to process job")
 
     else:
+        schedule = scheduled_job.pop('schedule')
         cron_job = get_app().apscheduler.add_job(func=cron_worker_job,
                                                  trigger='cron',
-                                                 **scheduled_job['schedule'],
+                                                 **schedule,
                                                  args=[cron_worker_index, scheduled_job],
                                                  id=worker_id,
                                                  name=scheduled_job['job_id'],

@@ -661,18 +661,22 @@ class TestScheduleJobs(unittest.TestCase):
 
         job_bundle_0_content = response_0_json[job_bundle_0]
         job_bundle_1_content = response_1_json[job_bundle_1]
+        expected_properties_0 = self._job_payload(job_bundle_0)
+        expected_properties_1 = self._job_payload(job_bundle_1)
+        expected_properties_0.pop('schedule')
+        expected_properties_1.pop('schedule')
 
         self.assertEqual([job_bundle_0], list(response_0_json.keys()))
         self.assertEqual(expected_schedule, job_bundle_0_content['schedule'])
         self.assertIsNone(job_bundle_0_content['next_run_time'])
         self.assertEqual('paused', job_bundle_0_content['status'])
-        self.assertEqual(self._job_payload(job_bundle_0), job_bundle_0_content['properties'])
+        self.assertEqual(expected_properties_0, job_bundle_0_content['properties'])
 
         self.assertEqual([job_bundle_1], list(response_1_json.keys()))
         self.assertEqual(expected_schedule, job_bundle_1_content['schedule'])
         self.assertLessEqual(job_bundle_1_content['next_run_time'] - now, 9)
         self.assertEqual('active', job_bundle_1_content['status'])
-        self.assertEqual(self._job_payload(job_bundle_1), job_bundle_1_content['properties'])
+        self.assertEqual(expected_properties_1, job_bundle_1_content['properties'])
 
     def test_scheduled_job_run_has_human_readable_timestamp(self):
         from glob import glob
