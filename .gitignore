@@ -10,3 +10,4 @@ archives_dir
 .vscode
 .env
 .venv
+Pipfile*
