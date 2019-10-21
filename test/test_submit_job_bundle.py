@@ -8,7 +8,6 @@ class TestSubmitJobBundle(unittest.TestCase):
         from subprocess import Popen
         import time
 
-        os.makedirs('working_dir', exist_ok=True)
         env = os.environ.copy()
         env['WORKING_DIR'] = 'working_dir'
         env['NUM_WORKERS'] = '0'
@@ -21,7 +20,6 @@ class TestSubmitJobBundle(unittest.TestCase):
 
         cls._server_process.terminate()
         cls._server_process.wait()
-        shutil.rmtree('working_dir')
 
     def setUp(self):
         self._job_id = None

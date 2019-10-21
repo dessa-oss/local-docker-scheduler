@@ -10,8 +10,6 @@ class TestScheduleJobs(unittest.TestCase):
         client = docker.from_env()
         client.images.pull('python:3.6-alpine')
 
-        os.makedirs('working_dir', exist_ok=True)
-        os.makedirs('archives_dir', exist_ok=True)
         self._start_server()
         time.sleep(1)
 
@@ -22,15 +20,13 @@ class TestScheduleJobs(unittest.TestCase):
             self._cleanup_jobs()
         finally:
             self._stop_server()
-            shutil.rmtree('archives_dir')
-            shutil.rmtree('working_dir')
 
     def _start_server(self):
         from subprocess import Popen
         import os
 
         env = os.environ.copy()
-        env['WORKING_DIR'] = 'working_dir'
+        env['WORKING_DIR'] = '/app/working_dir'
         env['NUM_WORKERS'] = '0'
         self._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
 
@@ -134,17 +130,19 @@ class TestScheduleJobs(unittest.TestCase):
         import os
 
         cwd = os.getcwd()
+        host_working_dir = os.environ['HOST_WORK_DIR']
+        host_archive_dir = os.environ['HOST_ARCHIVES_DIR']
 
         return {
             'job_id': job_bundle_name,
             'spec': {
                 'image': 'python:3.6-alpine',
                 'volumes': {
-                    f'{cwd}/working_dir/{job_bundle_name}': {
+                    f'{host_working_dir}/{job_bundle_name}': {
                         'bind': '/job',
                         'mode': 'rw'
                     },
-                    f'{cwd}/archives_dir': {
+                    f'{host_archive_dir}': {
                         'bind': '/job/job_archive',
                         'mode': 'rw'
                     }
