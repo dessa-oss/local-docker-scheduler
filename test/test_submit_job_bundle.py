@@ -8,8 +8,10 @@ class TestSubmitJobBundle(unittest.TestCase):
         from subprocess import Popen
         import time
 
+        cls.working_dir_path = '/tmp/local_docker_scheduler/working_dir' 
+
         env = os.environ.copy()
-        env['WORKING_DIR'] = 'working_dir'
+        env['WORKING_DIR'] = cls.working_dir_path
         env['NUM_WORKERS'] = '0'
         cls._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
         time.sleep(3)
@@ -77,10 +79,10 @@ class TestSubmitJobBundle(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual('Job bundle uploaded', response.text)
 
-        with open(f'working_dir/{self.job_id}/file_0', 'r') as file_0:
+        with open(f'{self.working_dir_path}/{self.job_id}/file_0', 'r') as file_0:
             self.assertEqual('hello world', file_0.read())
 
-        with open(f'working_dir/{self.job_id}/file_1', 'r') as file_1:
+        with open(f'{self.working_dir_path}/{self.job_id}/file_1', 'r') as file_1:
             self.assertEqual('goodbye world', file_1.read())
 
     def test_submitting_job_bundle_with_no_files_returns_correct_error_and_status_code(self):

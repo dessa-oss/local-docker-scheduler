@@ -10,23 +10,34 @@ class TestScheduleJobs(unittest.TestCase):
         client = docker.from_env()
         client.images.pull('python:3.6-alpine')
 
+        self.archives_dir_path = '/tmp/local_docker_scheduler/archives_dir'
+        self.working_dir_path = '/tmp/local_docker_scheduler/working_dir'
+
         self._start_server()
         time.sleep(1)
 
     def tearDown(self):
         import shutil
+        import os
+        import glob
 
         try:
             self._cleanup_jobs()
         finally:
             self._stop_server()
+        
+        archive_files = glob.glob(f'{self.archives_dir_path}/*')
+        working_dir_files = glob.glob(f'{self.working_dir_path}/*')
+        for f in archive_files + working_dir_files:
+            print(f)
+            shutil.rmtree(f)
 
     def _start_server(self):
         from subprocess import Popen
         import os
 
         env = os.environ.copy()
-        env['WORKING_DIR'] = '/app/working_dir'
+        env['WORKING_DIR'] = self.working_dir_path
         env['NUM_WORKERS'] = '0'
         self._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
 
@@ -130,8 +141,8 @@ class TestScheduleJobs(unittest.TestCase):
         import os
 
         cwd = os.getcwd()
-        host_working_dir = os.environ['HOST_WORK_DIR']
-        host_archive_dir = os.environ['HOST_ARCHIVES_DIR']
+        host_working_dir = self.working_dir_path
+        host_archive_dir = self.archives_dir_path
 
         return {
             'job_id': job_bundle_name,
@@ -202,8 +213,8 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
-        submitted_job_dirs = glob(f'working_dir/{job_bundle_name}*')
+        runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
+        submitted_job_dirs = glob(f'{self.working_dir_path}/{job_bundle_name}*')
         self.assertIn(len(runs_from_scheduled_job), [3, 4])
         self.assertIn(len(submitted_job_dirs), [1, 2])
 
@@ -361,7 +372,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         job_bundle_name, _ = self._submit_and_schedule_job()
         self._delete_scheduled_job(job_bundle_name)
-        self.assertNotIn(job_bundle_name, os.listdir('working_dir'))
+        self.assertNotIn(job_bundle_name, os.listdir(self.working_dir_path))
 
     def test_delete_scheduled_job_stops_running_job(self):
         from glob import glob
@@ -370,7 +381,7 @@ class TestScheduleJobs(unittest.TestCase):
         job_bundle_name, _ = self._submit_and_schedule_job()
         self._delete_scheduled_job(job_bundle_name)
         time.sleep(8)
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+        runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
         self.assertIn(len(runs_from_scheduled_job), [0, 1])
 
     def test_update_job_schedule_for_nonexistent_job_returns_404(self):
@@ -392,7 +403,7 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._update_job_schedule(job_bundle_name, new_schedule)
 
         time.sleep(10)
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+        runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [1, 2])
@@ -408,7 +419,7 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._schedule_job(job_payload)
         time.sleep(4)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+        runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(201, response.status_code)
         self.assertEqual(0, len(runs_from_scheduled_job))
@@ -421,7 +432,7 @@ class TestScheduleJobs(unittest.TestCase):
         resume_response = self._resume_job(job_bundle_name)
         time.sleep(7)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+        runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(204, update_response.status_code)
         self.assertEqual(204, resume_response.status_code)
@@ -469,7 +480,7 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._pause_job(job_bundle_name)
 
         time.sleep(7)
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+        runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [0, 1])
@@ -487,7 +498,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+        runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
@@ -508,7 +519,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+        runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
@@ -527,7 +538,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        runs_from_scheduled_job = glob(f'archives_dir/{job_bundle_name}_*')
+        runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
@@ -563,8 +574,8 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(6)
 
-        runs_from_scheduled_job_0 = glob(f'archives_dir/{job_bundle_0}_*')
-        runs_from_scheduled_job_1 = glob(f'archives_dir/{job_bundle_1}_*')
+        runs_from_scheduled_job_0 = glob(f'{self.archives_dir_path}/{job_bundle_0}_*')
+        runs_from_scheduled_job_1 = glob(f'{self.archives_dir_path}/{job_bundle_1}_*')
 
         self.assertIn(len(runs_from_scheduled_job_0), [0, 1])
         self.assertIn(len(runs_from_scheduled_job_1), [2, 3])
@@ -593,10 +604,10 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(6)
 
-        runs_from_scheduled_job_0 = glob(f'archives_dir/{job_bundle_0}_*')
+        runs_from_scheduled_job_0 = glob(f'{self.archives_dir_path}/{job_bundle_0}_*')
         self.assertIn(len(runs_from_scheduled_job_0), [2, 3])
 
-        runs_from_scheduled_job_1 = glob(f'archives_dir/{job_bundle_1}_*')
+        runs_from_scheduled_job_1 = glob(f'{self.archives_dir_path}/{job_bundle_1}_*')
         self.assertIn(len(runs_from_scheduled_job_1), [2, 3])
 
         jobs_information = self._scheduled_jobs().json()
@@ -686,7 +697,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         time.sleep(8)
 
-        runs_from_scheduled_job = glob(f"archives_dir/{job_bundle_name}_{'[0-9]'*8}_{'[0-9]'*6}")
+        runs_from_scheduled_job = glob(f"{self.archives_dir_path}/{job_bundle_name}_{'[0-9]'*8}_{'[0-9]'*6}")
         self.assertIn(len(runs_from_scheduled_job), [3, 4])
 
     def _create_jobs_with_and_without_prefix(self, prefix):
