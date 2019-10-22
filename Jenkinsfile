@@ -16,37 +16,40 @@ pipeline{
                 }
             }
         }
-        stage('Setup') {
-            steps {
-                sh "./setup_filesystem.sh"
-                sh './ci_install_requirements.sh'                    
+        stage('Build') {
+            container("python3") {
+                steps {
+                    sh "./setup_filesystem.sh"
+                    sh './ci_install_requirements.sh'                    
                 }
             }
         }
-        stage('Run Tests') {
-            steps {
-                sh 'python -m unittest test -f'
+        stage('Test') {
+            container("python3") {
+                steps {
+                    sh 'python -m unittest test -f'
+                }
             }
         }
     }
-    post {
-        failure {
-            script {
-                def output_logs = String.join('\n', currentBuild.rawBuild.getLog(200))
-                def attachments = [
-                    [
-                        pretext: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
-                        text: output_logs,
-                        fallback: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
-                        color: '#FF0000'
-                    ]
-                ]
+    // post {
+    //     failure {
+    //         script {
+    //             def output_logs = String.join('\n', currentBuild.rawBuild.getLog(200))
+    //             def attachments = [
+    //                 [
+    //                     pretext: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
+    //                     text: output_logs,
+    //                     fallback: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
+    //                     color: '#FF0000'
+    //                 ]
+    //             ]
 
-                slackSend(channel: '#f9s-builds', attachments: attachments)
-            }
-        }
-        success {
-            slackSend color: '#00FF00', message: 'Build succeeded for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.'
-        }
-    }
+    //             slackSend(channel: '#f9s-builds', attachments: attachments)
+    //         }
+    //     }
+    //     success {
+    //         slackSend color: '#00FF00', message: 'Build succeeded for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.'
+    //     }
+    // }
 }
