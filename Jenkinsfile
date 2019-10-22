@@ -18,17 +18,14 @@ pipeline{
         }
         stage('Setup') {
             steps {
-                container("python3") {
-                    sh "./setup_filesystem.sh"
-                    sh './ci_install_requirements.sh'                    
+                sh "./setup_filesystem.sh"
+                sh './ci_install_requirements.sh'                    
                 }
             }
         }
         stage('Run Tests') {
             steps {
-                container("python3") {
-                    sh 'python -m unittest test -f'
-                }
+                sh 'python -m unittest test -f'
             }
         }
     }
