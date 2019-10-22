@@ -12,13 +12,9 @@ class TestScheduleJobs(unittest.TestCase):
 
         client = docker.from_env()
         client.images.pull('python:3.6-alpine')
-        
 
         self.archives_dir_path = f'/tmp/local_docker_scheduler/archives_dir_{self.random_string}'
         self.working_dir_path = f'/tmp/local_docker_scheduler/working_dir_{self.random_string}'
-
-        os.makedirs(self.archives_dir_path, exist_ok=True)
-        os.makedirs(self.working_dir_path, exist_ok=True)
 
         self._start_server()
         time.sleep(1)
@@ -44,6 +40,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         env = os.environ.copy()
         env['WORKING_DIR'] = self.working_dir_path
+        env['ARCHIVE_DIR'] = self.archives_dir_path
         env['NUM_WORKERS'] = '0'
         self._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
 
