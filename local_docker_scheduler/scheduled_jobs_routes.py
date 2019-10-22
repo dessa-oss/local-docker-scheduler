@@ -109,6 +109,9 @@ def update_scheduled_job_status(job_id):
 @app.route('/scheduled_jobs/<string:job_id>', methods=['PATCH'])
 def update_scheduled_job_schedule(job_id):
     worker = docker_worker_pool.cron_worker_by_job_id(job_id)
+    if not worker:
+        return f'Scheduled job {job_id} not found', 404
+    
     job = request.json
     new_schedule = job.get('schedule', {})
     if not new_schedule:
@@ -116,9 +119,12 @@ def update_scheduled_job_schedule(job_id):
     try:
         worker.apscheduler_job.reschedule('cron', **new_schedule)
         return make_response(jsonify({}), 204)
-    # TODO - Capture a a more specific error
-    except:
-        return f'Scheduled job {job_id} not found', 404
+    except TypeError as e:
+        return f'{str(e)}', 400
+    except ValueError as e:
+        return f'{str(e)}', 400
+    except Exception as e:
+        return f'Unable to process schedule update for job {job_id}', 400
 
 @app.route('/scheduled_jobs/<string:job_id>', methods=['GET'])
 def scheduled_job(job_id):
