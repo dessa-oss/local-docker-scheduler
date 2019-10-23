@@ -390,6 +390,12 @@ def delete_archive(job_id):
     from uuid import UUID
 
     try:
+        uuid_obj = UUID(job_id, version=4)
+    except ValueError:
+        logging.error("A valid job UUID was not provided")
+        raise IndexError
+
+    try:
         rmtree('/archives/archive/'+job_id)
         logging.info(f"Successfully deleted archive for Job {job_id}")
     except FileNotFoundError:
