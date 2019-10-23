@@ -21,6 +21,7 @@ import logging
 from tracker_client_plugins import tracker_clients
 from .scheduled_jobs_routes import *
 from .constants import _WORKING_DIR, _ARCHIVE_DIR
+from reverse_proxy import forward
 
 app = get_app()
 
@@ -125,6 +126,7 @@ def show_running_jobs():
     return jsonify({key: value for key, value in running_jobs.items()})
 
 @app.route('/running_jobs/<string:job_id>', methods=['DELETE'])
+@forward('job_id', 'job_id')
 def delete_running_job(job_id):
     try:
         docker_worker_pool.stop_job(job_id)
@@ -133,6 +135,7 @@ def delete_running_job(job_id):
     return make_response(jsonify({}), 204)
 
 @app.route('/completed_jobs/<string:job_id>', methods=['DELETE'])
+@forward('job_id', 'job_id')
 def delete_completed_job(job_id):
     return _delete_job(job_id)
 
@@ -154,6 +157,7 @@ def _delete_job(job_id):
 
 
 @app.route('/running_jobs/<string:job_id>/logs', methods=['GET'])
+@forward('job_id', 'job_id')
 def show_logs_running_jobs(job_id):
     worker = docker_worker_pool.worker_by_job_id(job_id)
     if worker is None:
@@ -170,6 +174,7 @@ def show_logs_running_jobs(job_id):
 
 
 @app.route('/running_jobs/<string:job_id>/container_id', methods=['GET'])
+@forward('job_id', 'job_id')
 def show_container_id_running_jobs(job_id):
     worker = docker_worker_pool.worker_by_job_id(job_id)
     if worker is None:
@@ -237,6 +242,7 @@ def delete_worker(worker_id):
     return make_response(jsonify({}), 204)
 
 @app.route('/jobs/<string:job_id>', methods=['GET'])
+@forward('job_id', 'job_id')
 def get_job(job_id):
     if job_id in failed_jobs:
         response = {
