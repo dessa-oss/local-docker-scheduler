@@ -18,6 +18,7 @@ from docker.errors import APIError
 from db import queue, running_jobs, completed_jobs, failed_jobs, peek_lock, gpu_pool, RLock
 from local_docker_scheduler import get_app
 from tracker_client_plugins import tracker_clients
+from reverse_proxy import routing_map, my_url
 
 
 _workers = {}
@@ -67,6 +68,8 @@ class DockerWorker:
         job_id = job['job_id']
 
         running_jobs[job_id] = job
+
+        routing_map['job_id'][job_id] = my_url
 
         job['spec']['detach'] = True
 
