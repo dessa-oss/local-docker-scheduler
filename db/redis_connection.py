@@ -17,7 +17,7 @@ class RedisDict:
     def __getitem__(self, field):
         response = self._redis.hget(self._key, dumps(field))
         if response is None:
-            raise IndexError
+            raise KeyError
         return loads(response)
 
     def __setitem__(self, field, value):
