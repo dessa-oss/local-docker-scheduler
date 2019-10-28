@@ -428,6 +428,7 @@ def _create_scheduled_run_job_spec(scheduled_job, new_job_id):
 
     spec = scheduled_job_run['spec']
     spec['environment']['JOB_ID'] = new_job_id
+    spec['environment']['FOUNDATIONS_JOB_ID'] = new_job_id
     spec['volumes'] = _rewrite_volumes(spec['volumes'], new_job_id)
 
     return scheduled_job_run
