@@ -332,7 +332,9 @@ class TestScheduleJobs(unittest.TestCase):
             'month': '*',
             'second': '*/2',
             'week': '*',
-            'year': '*'
+            'year': '*',
+            'start_date': None,
+            'end_date': None
         }
 
         self.assertEqual(200, response.status_code)
@@ -670,7 +672,9 @@ class TestScheduleJobs(unittest.TestCase):
             'month': '*',
             'second': '*/2',
             'week': '*',
-            'year': '*'
+            'year': '*',
+            'start_date': None,
+            'end_date': None
         }
 
         job_bundle_0_content = response_0_json[job_bundle_0]

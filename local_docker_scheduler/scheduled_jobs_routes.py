@@ -164,4 +164,6 @@ def _job_directory_exists(job_id):
     return False
 
 def _schedule_dict(trigger):
-    return {field.name: str(field) for field in trigger.fields}
+    schedule_dates = {'start_date': trigger.start_date, 'end_date': trigger.end_date}
+    schedule = {field.name: str(field) for field in trigger.fields}
+    return {**schedule, **schedule_dates}
