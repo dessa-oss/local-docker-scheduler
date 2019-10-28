@@ -108,16 +108,18 @@ def update_scheduled_job_status(job_id):
 
 @app.route('/scheduled_jobs/<string:job_id>', methods=['PATCH'])
 def update_scheduled_job_schedule(job_id):
+    from docker_worker_pool import DockerWorker
     worker = docker_worker_pool.cron_worker_by_job_id(job_id)
+    _cron_workers = docker_worker_pool.get_cron_workers()
     if not worker:
         return f'Scheduled job {job_id} not found', 404
-    
+
     job = request.json
     new_schedule = job.get('schedule', {})
     if not new_schedule:
         return "Bad job schedule", 400
     try:
-        worker.apscheduler_job.reschedule('cron', **new_schedule)
+        _update_job(worker, new_schedule)
         return make_response(jsonify({}), 204)
     except TypeError as e:
         return f'{str(e)}', 400
@@ -167,3 +169,22 @@ def _schedule_dict(trigger):
     schedule_dates = {'start_date': trigger.start_date, 'end_date': trigger.end_date}
     schedule = {field.name: str(field) for field in trigger.fields}
     return {**schedule, **schedule_dates}
+
+def _update_job(worker, new_schedule):
+    from docker_worker_pool import DockerWorker
+    _cron_workers = docker_worker_pool.get_cron_workers()
+
+    worker_index = int(worker.worker_id.split('_')[-1])
+    old_scheduled_job = worker.apscheduler_job
+    docker_worker_pool.delete_cron_worker(worker_index)
+
+    new_scheduled_job = get_app().apscheduler.add_job(func=old_scheduled_job.func,
+                                                      trigger='cron',
+                                                      **new_schedule,
+                                                      args=old_scheduled_job.args,
+                                                      id=old_scheduled_job.id,
+                                                      name=old_scheduled_job.name,
+                                                      jobstore='redis')
+
+    _cron_workers[worker_index] = DockerWorker(old_scheduled_job.id, new_scheduled_job)
+
