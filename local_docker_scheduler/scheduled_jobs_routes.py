@@ -13,19 +13,10 @@ from .constants import _WORKING_DIR, _ARCHIVE_DIR
 app = get_app()
 
 
-def _check_for_job_id_prefix():
-    job_id_prefix = None
-    try:
-        job_id_prefix = request.get_json().get('job_id_prefix')
-    except:
-        job_id_prefix = request.args.get('job_id_prefix')
-    return job_id_prefix
-
 @app.route('/scheduled_jobs', methods=['GET'])
 def scheduled_jobs():
     current_scheduled_jobs = docker_worker_pool.get_cron_workers()
     full_list_of_scheduled_jobs = {worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values()}
-    job_id_prefix = _check_for_job_id_prefix()
 
     if request.args:
         project = request.args.get('project')

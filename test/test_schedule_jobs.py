@@ -163,7 +163,7 @@ class TestScheduleJobs(unittest.TestCase):
                 },
                 'working_dir': '/job',
                 'environment': {
-                    'JOB_ID': job_bundle_name,
+                    'FOUNDATIONS_JOB_ID': job_bundle_name,
                     'ENTRYPOINT': 'whatever_i_want.py'
                 },
                 'entrypoint': [
@@ -511,6 +511,7 @@ class TestScheduleJobs(unittest.TestCase):
     def test_can_pause_job_twice(self):
         from glob import glob
         import time
+        
 
         job_bundle_name, _ = self._submit_and_schedule_job()
         self._pause_job(job_bundle_name)
@@ -607,7 +608,7 @@ class TestScheduleJobs(unittest.TestCase):
         self._resume_job(job_bundle_0)
         self._resume_job(job_bundle_1)
 
-        time.sleep(6)
+        time.sleep(7)
 
         runs_from_scheduled_job_0 = glob(f'{self.archives_dir_path}/{job_bundle_0}_*')
         self.assertIn(len(runs_from_scheduled_job_0), [2, 3])
