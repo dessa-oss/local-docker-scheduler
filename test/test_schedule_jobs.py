@@ -144,8 +144,6 @@ class TestScheduleJobs(unittest.TestCase):
     @classmethod
     def _delete_scheduled_job(cls, job_id):
         import requests
-        import time
-
         response = requests.delete(f'http://localhost:5000/scheduled_jobs/{job_id}')
         return response
 
@@ -446,7 +444,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         update_response = self._update_job_schedule(job_bundle_name, new_schedule)
         resume_response = self._resume_job(job_bundle_name)
-        time.sleep(7)
+        time.sleep(self.wait_time)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
@@ -456,9 +454,6 @@ class TestScheduleJobs(unittest.TestCase):
 
 
     def test_update_job_schedule_with_empty_schedule_returns_400(self):
-        from glob import glob
-        import time
-
         new_schedule = {}
 
         job_bundle_name, _ = self._submit_and_schedule_job()
@@ -495,7 +490,7 @@ class TestScheduleJobs(unittest.TestCase):
         job_bundle_name, _ = self._submit_and_schedule_job()
         response = self._pause_job(job_bundle_name)
 
-        time.sleep(7)
+        time.sleep(self.wait_time)
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
@@ -510,7 +505,7 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(self.wait_time)
 
         response = self._resume_job(job_bundle_name)
-        time.sleep(self.wait_time)
+        time.sleep(self.wait_time * 2)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
@@ -531,7 +526,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         response = self._resume_job(job_bundle_name)
 
-        time.sleep(8)
+        time.sleep(12)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
