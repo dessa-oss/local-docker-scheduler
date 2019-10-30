@@ -8,7 +8,7 @@ class TestScheduleJobs(unittest.TestCase):
     archives_dir_path = '/tmp/local_docker_scheduler/archives_dir'
     working_dir_path = '/tmp/local_docker_scheduler/working_dir'
     _server_process = None
-    wait_time = 5
+    wait_time = 7
 
     @classmethod
     def setUpClass(cls):
@@ -505,7 +505,7 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(self.wait_time)
 
         response = self._resume_job(job_bundle_name)
-        time.sleep(self.wait_time * 2)
+        time.sleep(self.wait_time)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
@@ -517,20 +517,22 @@ class TestScheduleJobs(unittest.TestCase):
         import time
 
         job_bundle_name, _ = self._submit_and_schedule_job()
-        self._pause_job(job_bundle_name)
-        pause_response = self._pause_job(job_bundle_name)
 
+        # First Request to pause
+        self._pause_job(job_bundle_name)
+        # Check if second request to pause produces response as expected
+        pause_response = self._pause_job(job_bundle_name)
         self.assertEqual(204, pause_response.status_code)
 
-        time.sleep(7)
+        # wait before resuming to allow time to elapse for checking if actually paused
+        time.sleep(self.wait_time)
 
-        response = self._resume_job(job_bundle_name)
-
-        time.sleep(12)
+        resume_response = self._resume_job(job_bundle_name)
+        time.sleep(self.wait_time)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
-        self.assertEqual(204, response.status_code)
+        self.assertEqual(204, resume_response.status_code)
         self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
 
     def test_can_resume_job_twice(self):
@@ -540,12 +542,14 @@ class TestScheduleJobs(unittest.TestCase):
         job_bundle_name, _ = self._submit_and_schedule_job()
         self._pause_job(job_bundle_name)
 
-        time.sleep(7)
+        time.sleep(self.wait_time)
 
+        # First Request to resume
         self._resume_job(job_bundle_name)
+        # Check if second request to resume produces response as expected
         response = self._resume_job(job_bundle_name)
 
-        time.sleep(8)
+        time.sleep(self.wait_time)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
@@ -570,18 +574,13 @@ class TestScheduleJobs(unittest.TestCase):
 
     def test_scheduler_persists_scheduled_and_paused_jobs(self):
         from glob import glob
-        import time
         
         job_bundle_0, _ = self._submit_and_schedule_job()
         self._pause_job(job_bundle_0)
 
         job_bundle_1, _ = self._submit_and_schedule_job()
 
-        self._stop_server()
-        time.sleep(2)
-        self._start_server()
-
-        time.sleep(6)
+        self._restart_server()
 
         runs_from_scheduled_job_0 = glob(f'{self.archives_dir_path}/{job_bundle_0}_*')
         runs_from_scheduled_job_1 = glob(f'{self.archives_dir_path}/{job_bundle_1}_*')
@@ -603,10 +602,7 @@ class TestScheduleJobs(unittest.TestCase):
         job_bundle_1, _ = self._submit_and_schedule_job()
         self._pause_job(job_bundle_1)
 
-        self._stop_server()
-        time.sleep(self.wait_time)
-        self._start_server()
-        time.sleep(self.wait_time)
+        self._restart_server()
 
         self._resume_job(job_bundle_0)
         self._resume_job(job_bundle_1)
@@ -624,17 +620,12 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual('active', jobs_information[job_bundle_1]['status'])
 
     def test_can_delete_paused_job_after_restarting_scheduler(self):
-        import time
-
         job_bundle_0, _ = self._submit_and_schedule_job()
         self._pause_job(job_bundle_0)
 
         job_bundle_1, _ = self._submit_and_schedule_job()
 
-        self._stop_server()
-
-        self._start_server()
-        time.sleep(self.wait_time)
+        self._restart_server()
 
         response = self._delete_scheduled_job(job_bundle_0)
         self.assertEqual(204, response.status_code)
@@ -704,8 +695,7 @@ class TestScheduleJobs(unittest.TestCase):
         import time
 
         job_bundle_name, _ = self._submit_and_schedule_job()
-
-        time.sleep(8)
+        time.sleep(self.wait_time)
 
         runs_from_scheduled_job = glob(f"{self.archives_dir_path}/{job_bundle_name}_{'[0-9]'*8}_{'[0-9]'*6}")
         self.assertIn(len(runs_from_scheduled_job), [3, 4])
@@ -744,3 +734,11 @@ class TestScheduleJobs(unittest.TestCase):
             has_project_name = project_name in job_id and has_project_name
 
         self.assertTrue(has_project_name)
+
+    def _restart_server(self):
+        import time
+        self._stop_server()
+        time.sleep(self.wait_time)
+
+        self._start_server()
+        time.sleep(self.wait_time)
