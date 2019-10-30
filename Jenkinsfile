@@ -16,18 +16,35 @@ pipeline{
                 }
             }
         }
-        stage('Build') {
+        stage('Setup Environment'){
             steps {
                 container("python3") {
-                    sh "./setup_filesystem.sh"
+                    sh "./docker/setup_filesystem.sh"
+                }
+            }
+        }
+        stage('Install Test Requirements') {
+            steps {
+                container("python3") {
+                    
                     sh './ci_install_requirements.sh'                    
                 }
             }
         }
-        stage('Test') {
+        stage('Run All Test') {
             steps {
                 container("python3") {
                     sh 'python -m unittest test -f'
+                }
+            }
+        }
+        stage('Build and Push Scheduler Package Image') {
+            steps {
+                container("python3") {
+                    ws("${WORKSPACE}/foundations_model_package/src"){
+                        sh 'docker login docker.shehanigans.net -u $NEXUS_USER -p $NEXUS_PASSWORD'
+                        sh './build_and_push.sh'
+                    }
                 }
             }
         }
