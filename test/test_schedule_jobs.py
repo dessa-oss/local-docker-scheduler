@@ -165,9 +165,6 @@ class TestScheduleJobs(unittest.TestCase):
         return requests.put(f'http://localhost:5000/scheduled_jobs/{job_id}', json=payload)
 
     def _job_payload(self, job_bundle_name):
-        import os
-
-        cwd = os.getcwd()
         host_working_dir = self.working_dir_path
         host_archive_dir = self.archives_dir_path
 
@@ -296,9 +293,6 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual("Job must contain valid 'job_id', 'spec'", response.text)
 
     def test_schedule_job_with_valid_payload_structure_but_schedule_empty_returns_201_with_paused_job(self):
-        import os
-        import time
-
         job_bundle_name = self._create_job('fake_job')
         job_payload = self._job_payload(job_bundle_name)
 
@@ -391,18 +385,14 @@ class TestScheduleJobs(unittest.TestCase):
 
     def test_delete_scheduled_job_removes_working_dir(self):
         import os
-
         job_bundle_name, _ = self._submit_and_schedule_job()
         self._delete_scheduled_job(job_bundle_name)
         self.assertNotIn(job_bundle_name, os.listdir(self.working_dir_path))
 
     def test_delete_scheduled_job_stops_running_job(self):
         from glob import glob
-        import time
-
         job_bundle_name, _ = self._submit_and_schedule_job()
         self._delete_scheduled_job(job_bundle_name)
-        time.sleep(8)
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
         self.assertIn(len(runs_from_scheduled_job), [0, 1])
 
@@ -424,7 +414,7 @@ class TestScheduleJobs(unittest.TestCase):
         job_bundle_name, _ = self._submit_and_schedule_job()
         response = self._update_job_schedule(job_bundle_name, new_schedule)
 
-        time.sleep(10)
+        time.sleep(5)
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
@@ -591,7 +581,7 @@ class TestScheduleJobs(unittest.TestCase):
         job_bundle_1, _ = self._submit_and_schedule_job()
 
         self._stop_server()
-        time.sleep(1)
+        time.sleep(2)
         self._start_server()
 
         time.sleep(5)
@@ -617,7 +607,7 @@ class TestScheduleJobs(unittest.TestCase):
         self._pause_job(job_bundle_1)
 
         self._stop_server()
-        time.sleep(1)
+        time.sleep(2)
         self._start_server()
         time.sleep(1)
 
