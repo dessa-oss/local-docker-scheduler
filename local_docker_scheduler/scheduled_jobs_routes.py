@@ -221,6 +221,5 @@ def _recreate_cron_worker(scheduled_job):
                                                         args=scheduled_job.args,
                                                         id=scheduled_job.id,
                                                         name=scheduled_job.name,
-                                                        jobstore='redis'
-
+                                                        jobstore='redis')
     return recreated_scheduled_job
