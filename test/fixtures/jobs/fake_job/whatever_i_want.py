@@ -3,7 +3,7 @@ import os
 import time
 
 current_time = math.floor(time.time())
-job_id = os.environ['JOB_ID']
+job_id = os.environ['FOUNDATIONS_JOB_ID']
 
 os.makedirs(f'/job/job_archive/{job_id}', exist_ok=True)
 

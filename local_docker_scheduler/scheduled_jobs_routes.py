@@ -23,6 +23,7 @@ def _check_for_parameter(parameter):
             print('no parameters passed')
     return None
 
+
 @app.route('/scheduled_jobs', methods=['GET'])
 def scheduled_jobs():
     current_scheduled_jobs = docker_worker_pool.get_cron_workers()
@@ -30,10 +31,11 @@ def scheduled_jobs():
 
     if _check_for_parameter('project'):
         project = _check_for_parameter('project')
-        scheduled_jobs = {job: job_details for job, job_details in full_list_of_scheduled_jobs.items() if job_details['properties']['metadata']['project_name'] == project}
-        return jsonify(scheduled_jobs)
+        project_scheduled_jobs = {job: job_details for job, job_details in full_list_of_scheduled_jobs.items() if job_details['properties']['metadata']['project_name'] == project}
+        return jsonify(project_scheduled_jobs)
 
     return jsonify(full_list_of_scheduled_jobs)
+
 
 @app.route('/scheduled_jobs', methods=['POST'])
 def create_scheduled_job():
@@ -77,6 +79,7 @@ def delete_scheduled_job(job_id):
     except Exception as ex:
         return f'Scheduled job {job_id} not found', 404
 
+
 @app.route('/scheduled_jobs/<string:job_id>', methods=['PUT'])
 def update_scheduled_job_status(job_id):
     from datetime import datetime
@@ -107,6 +110,7 @@ def update_scheduled_job_status(job_id):
     except:
         return f"Scheduled job {job_id} not found", 404
 
+
 @app.route('/scheduled_jobs/<string:job_id>', methods=['PATCH'])
 def update_scheduled_job_schedule(job_id):
     from docker_worker_pool import DockerWorker
@@ -129,6 +133,7 @@ def update_scheduled_job_schedule(job_id):
     except Exception as e:
         return f'Unable to process schedule update for job {job_id}', 400
 
+
 @app.route('/scheduled_jobs/<string:job_id>', methods=['GET'])
 def scheduled_job(job_id):
     current_scheduled_jobs = docker_worker_pool.get_cron_workers()
@@ -137,6 +142,7 @@ def scheduled_job(job_id):
     if response:
         return jsonify(response)
     return f'Scheduled job {job_id} not found', 404
+
 
 def _scheduled_job_response_entry(worker):
     from datetime import datetime
@@ -159,6 +165,7 @@ def _scheduled_job_response_entry(worker):
         'properties': worker.apscheduler_job.args[1]
     }
 
+
 def _job_directory_exists(job_id):
     import os
 
@@ -166,10 +173,12 @@ def _job_directory_exists(job_id):
         return True
     return False
 
+
 def _schedule_dict(trigger):
     schedule_dates = {'start_date': trigger.start_date, 'end_date': trigger.end_date}
     schedule = {field.name: str(field) for field in trigger.fields}
     return {**schedule, **schedule_dates}
+
 
 def _update_job(worker, new_schedule):
     from docker_worker_pool import DockerWorker

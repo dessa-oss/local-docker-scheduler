@@ -380,12 +380,6 @@ def delete_archive(job_id):
     from uuid import UUID
 
     try:
-        uuid_obj = UUID(job_id, version=4)
-    except ValueError:
-        logging.error("A valid job UUID was not provided")
-        raise IndexError
-
-    try:
         rmtree('/archives/archive/'+job_id)
         logging.info(f"Successfully deleted archive for Job {job_id}")
     except FileNotFoundError:
@@ -427,7 +421,6 @@ def _create_scheduled_run_job_spec(scheduled_job, new_job_id):
     scheduled_job_run['job_id'] = new_job_id
 
     spec = scheduled_job_run['spec']
-    spec['environment']['JOB_ID'] = new_job_id
     spec['environment']['FOUNDATIONS_JOB_ID'] = new_job_id
     spec['volumes'] = _rewrite_volumes(spec['volumes'], new_job_id)
 
