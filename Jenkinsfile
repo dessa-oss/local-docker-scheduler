@@ -42,7 +42,7 @@ pipeline{
             steps {
                 container("python3") {
                     ws("${WORKSPACE}/foundations_model_package/src"){
-                        sh 'docker login docker.shehanigans.net -u $NEXUS_USER -p $NEXUS_PASSWORD'
+                        sh 'docker login $NEXUS_DOCKER_REGISTRY -u $NEXUS_USER -p $NEXUS_PASSWORD'
                         sh './build_and_push.sh'
                     }
                 }
