@@ -616,7 +616,7 @@ class TestScheduleJobs(unittest.TestCase):
         self._resume_job(job_bundle_0)
         self._resume_job(job_bundle_1)
 
-        time.sleep(wait_time)
+        time.sleep(self.wait_time)
 
         runs_from_scheduled_job_0 = glob(f'{self.archives_dir_path}/{job_bundle_0}_*')
         self.assertIn(len(runs_from_scheduled_job_0), [2, 3])
@@ -637,9 +637,9 @@ class TestScheduleJobs(unittest.TestCase):
         job_bundle_1, _ = self._submit_and_schedule_job()
 
         self._stop_server()
-        time.sleep(1)
+
         self._start_server()
-        time.sleep(1)
+        time.sleep(self.wait_time)
 
         response = self._delete_scheduled_job(job_bundle_0)
         self.assertEqual(204, response.status_code)
