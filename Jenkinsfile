@@ -17,16 +17,16 @@ pipeline{
             }
         }
         stage('Build') {
-            container("python3") {
-                steps {
+            steps {
+                container("python3") {
                     sh "./setup_filesystem.sh"
                     sh './ci_install_requirements.sh'                    
                 }
             }
         }
         stage('Test') {
-            container("python3") {
-                steps {
+            steps {
+                container("python3") {
                     sh 'python -m unittest test -f'
                 }
             }
