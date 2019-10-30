@@ -1,52 +1,74 @@
 import unittest
 import uuid
 
+
 class TestScheduleJobs(unittest.TestCase):
 
     random_string = str(uuid.uuid4())[:8]
+    archives_dir_path = '/tmp/local_docker_scheduler/archives_dir'
+    working_dir_path = '/tmp/local_docker_scheduler/working_dir'
+    _server_process = None
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         import docker
-        import os
         import time
 
         client = docker.from_env()
         client.images.pull('python:3.6-alpine')
 
-        self.archives_dir_path = f'/tmp/local_docker_scheduler/archives_dir_{self.random_string}'
-        self.working_dir_path = f'/tmp/local_docker_scheduler/working_dir_{self.random_string}'
+        cls.archives_dir_path = f'/tmp/local_docker_scheduler/archives_dir_{cls.random_string}'
+        cls.working_dir_path = f'/tmp/local_docker_scheduler/working_dir_{cls.random_string}'
 
-        self._start_server()
+        cls._start_server()
         time.sleep(1)
+
+    def setUp(self):
+        redis = self.load_redis()
+        redis.flushall()
+
+    @classmethod
+    def load_redis(cls):
+        import yaml
+        from redis import StrictRedis
+        with open('database.config.yaml', 'r') as f:
+            db_dict = yaml.load(f, Loader=yaml.FullLoader)
+
+        conn_info = db_dict['running_jobs']['args']
+        return StrictRedis(conn_info['host'], conn_info['port'], 0)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._stop_server()
 
     def tearDown(self):
         import shutil
-        import os
         import glob
-
         try:
             self._cleanup_jobs()
-        finally:
-            self._stop_server()
-        
-        archive_files = glob.glob(f'{self.archives_dir_path}/*')
-        working_dir_files = glob.glob(f'{self.working_dir_path}/*')
-        for f in archive_files + working_dir_files:
-            shutil.rmtree(f)
+            archive_files = glob.glob(f'{self.archives_dir_path}/*')
+            working_dir_files = glob.glob(f'{self.working_dir_path}/*')
+            for f in archive_files + working_dir_files:
+                shutil.rmtree(f)
+        except Exception as e:
+            print('Unable to delete jobs at the end of the test:', str(e))
 
-    def _start_server(self):
+    @classmethod
+    def _start_server(cls):
         from subprocess import Popen
         import os
 
-        env = os.environ.copy()
-        env['WORKING_DIR'] = self.working_dir_path
-        env['ARCHIVE_DIR'] = self.archives_dir_path
+        env = os.environ
+        env['WORKING_DIR'] = cls.working_dir_path
+        env['ARCHIVE_DIR'] = cls.archives_dir_path
         env['NUM_WORKERS'] = '0'
-        self._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
+        cls._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
 
-    def _stop_server(self):
-        self._server_process.terminate()
-        self._server_process.wait()
+    @classmethod
+    def _stop_server(cls):
+        if cls._server_process:
+            cls._server_process.terminate()
+            cls._server_process.wait()
 
     def _generate_tarball(self, job_tar_source_dir, job_id_prefix=None):
         import os
@@ -107,7 +129,8 @@ class TestScheduleJobs(unittest.TestCase):
         import requests
         return requests.post('http://localhost:5000/scheduled_jobs', json=job_payload)
 
-    def _scheduled_jobs(self):
+    @classmethod
+    def _scheduled_jobs(cls):
         import requests
         return requests.get('http://localhost:5000/scheduled_jobs')
 
@@ -115,7 +138,8 @@ class TestScheduleJobs(unittest.TestCase):
         import requests
         return requests.get(f'http://localhost:5000/scheduled_jobs/{job_id}')
 
-    def _delete_scheduled_job(self, job_id):
+    @classmethod
+    def _delete_scheduled_job(cls, job_id):
         import requests
         import time
 
@@ -187,11 +211,12 @@ class TestScheduleJobs(unittest.TestCase):
         response = self._schedule_job(job_payload)
         return job_bundle_name, response
 
-    def _cleanup_jobs(self):
+    @classmethod
+    def _cleanup_jobs(cls):
         failure_log = ''
 
-        for job in self._scheduled_jobs().json():
-            response = self._delete_scheduled_job(job)
+        for job in cls._scheduled_jobs().json():
+            response = cls._delete_scheduled_job(job)
 
             if response.status_code != 204:
                 failure_log += f'failed to cleanup {job}: {response.text}\n'
@@ -235,8 +260,6 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual("Job must contain 'job_id', 'spec'", response.text)
 
     def test_schedule_job_with_valid_payload_structure_but_invalid_payload_contents_400(self):
-        import time
-
         job_bundle_name = self._create_job('fake_job')
         job_payload = self._job_payload(job_bundle_name)
 
@@ -250,9 +273,6 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual("Job must contain valid 'job_id', 'spec'", response.text)
 
     def test_schedule_job_with_valid_payload_structure_but_job_id_None_returns_400(self):
-        import os
-        import time
-
         job_bundle_name = self._create_job('fake_job')
         job_payload = self._job_payload(job_bundle_name)
 
@@ -265,9 +285,6 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual("Job must contain valid 'job_id', 'spec'", response.text)
 
     def test_schedule_job_with_valid_payload_structure_but_spec_None_returns_400(self):
-        import os
-        import time
-
         job_bundle_name = self._create_job('fake_job')
         job_payload = self._job_payload(job_bundle_name)
 
@@ -620,7 +637,6 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual('active', jobs_information[job_bundle_1]['status'])
 
     def test_can_delete_paused_job_after_restarting_scheduler(self):
-        from glob import glob
         import time
 
         job_bundle_0, _ = self._submit_and_schedule_job()
