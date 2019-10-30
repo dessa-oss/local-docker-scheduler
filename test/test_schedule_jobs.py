@@ -581,7 +581,7 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(2)
         self._start_server()
 
-        time.sleep(5)
+        time.sleep(6)
 
         runs_from_scheduled_job_0 = glob(f'{self.archives_dir_path}/{job_bundle_0}_*')
         runs_from_scheduled_job_1 = glob(f'{self.archives_dir_path}/{job_bundle_1}_*')
