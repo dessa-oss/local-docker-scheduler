@@ -25,6 +25,7 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(1)
 
     def setUp(self):
+        import time
         redis = self.load_redis()
         redis.flushall()
         time.sleep(1)
@@ -146,7 +147,6 @@ class TestScheduleJobs(unittest.TestCase):
         import time
 
         response = requests.delete(f'http://localhost:5000/scheduled_jobs/{job_id}')
-        time.sleep(1)
         return response
 
     def _update_job_schedule(self, job_id, cron_schedule):
