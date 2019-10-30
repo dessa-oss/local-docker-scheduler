@@ -9,6 +9,7 @@ import docker_worker_pool
 from local_docker_scheduler import get_app
 from flask import jsonify, request, make_response
 from .constants import _WORKING_DIR, _ARCHIVE_DIR
+import logging
 
 app = get_app()
 
@@ -113,10 +114,12 @@ def update_scheduled_job_status(job_id):
 
 @app.route('/scheduled_jobs/<string:job_id>', methods=['PATCH'])
 def update_scheduled_job_schedule(job_id):
+    from werkzeug.exceptions import BadRequest
     from docker_worker_pool import DockerWorker
     worker = docker_worker_pool.cron_worker_by_job_id(job_id)
     _cron_workers = docker_worker_pool.get_cron_workers()
     if not worker:
+        logging.info('worker not found')
         return f'Scheduled job {job_id} not found', 404
 
     job = request.json
@@ -126,11 +129,12 @@ def update_scheduled_job_schedule(job_id):
     try:
         _update_job(worker, new_schedule)
         return make_response(jsonify({}), 204)
-    except TypeError as e:
-        return f'{str(e)}', 400
-    except ValueError as e:
-        return f'{str(e)}', 400
+    except BadRequest as e:
+        logging.info(f'Cannot process schedule update: invalid schedule provided for job {job_id}')
+        return f'Cannot process schedule update: invalid schedule provided for job {job_id}', 400
     except Exception as e:
+        logging.info(f'Unable to process schedule update for job {job_id}')
+        logging.info(str(e))
         return f'Unable to process schedule update for job {job_id}', 400
 
 
@@ -181,6 +185,7 @@ def _schedule_dict(trigger):
 
 
 def _update_job(worker, new_schedule):
+    from werkzeug.exceptions import BadRequest
     from docker_worker_pool import DockerWorker
     _cron_workers = docker_worker_pool.get_cron_workers()
 
@@ -188,13 +193,34 @@ def _update_job(worker, new_schedule):
     old_scheduled_job = worker.apscheduler_job
     docker_worker_pool.delete_cron_worker(worker_index)
 
-    new_scheduled_job = get_app().apscheduler.add_job(func=old_scheduled_job.func,
-                                                      trigger='cron',
-                                                      **new_schedule,
-                                                      args=old_scheduled_job.args,
-                                                      id=old_scheduled_job.id,
-                                                      name=old_scheduled_job.name,
-                                                      jobstore='redis')
+    try:
+        scheduled_job = get_app().apscheduler.add_job(func=old_scheduled_job.func,
+                                                        trigger='cron',
+                                                        **new_schedule,
+                                                        args=old_scheduled_job.args,
+                                                        id=old_scheduled_job.id,
+                                                        name=old_scheduled_job.name,
+                                                        jobstore='redis')
+    except TypeError as e:
+        scheduled_job = _recreate_cron_worker(old_scheduled_job)
+        raise BadRequest(e)
+    except ValueError as e:
+        scheduled_job = _recreate_cron_worker(old_scheduled_job)
+        raise BadRequest(e)
+    finally:
+        _cron_workers[worker_index] = DockerWorker(old_scheduled_job.id, scheduled_job)
 
-    _cron_workers[worker_index] = DockerWorker(old_scheduled_job.id, new_scheduled_job)
+def _recreate_cron_worker(scheduled_job):
+    from docker_worker_pool import DockerWorker
 
+    schedule = _schedule_dict(scheduled_job.trigger)
+
+    recreated_scheduled_job = get_app().apscheduler.add_job(func=scheduled_job.func,
+                                                        trigger='cron',
+                                                        **schedule,
+                                                        args=scheduled_job.args,
+                                                        id=scheduled_job.id,
+                                                        name=scheduled_job.name,
+                                                        jobstore='redis'
+
+    return recreated_scheduled_job
