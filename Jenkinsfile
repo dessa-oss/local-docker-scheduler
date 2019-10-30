@@ -34,7 +34,7 @@ pipeline{
         stage('Run All Test') {
             steps {
                 container("python3") {
-                    sh 'python -m unittest test -f'
+                    sh 'python -m unittest -v -f test'
                 }
             }
         }

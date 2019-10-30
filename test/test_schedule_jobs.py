@@ -8,6 +8,7 @@ class TestScheduleJobs(unittest.TestCase):
     archives_dir_path = '/tmp/local_docker_scheduler/archives_dir'
     working_dir_path = '/tmp/local_docker_scheduler/working_dir'
     _server_process = None
+    wait_time = 5
 
     @classmethod
     def setUpClass(cls):
@@ -26,6 +27,7 @@ class TestScheduleJobs(unittest.TestCase):
     def setUp(self):
         redis = self.load_redis()
         redis.flushall()
+        time.sleep(1)
 
     @classmethod
     def load_redis(cls):
@@ -213,11 +215,13 @@ class TestScheduleJobs(unittest.TestCase):
         failure_log = ''
 
         for job in cls._scheduled_jobs().json():
-            response = cls._delete_scheduled_job(job)
+            try:
+                response = cls._delete_scheduled_job(job)
 
-            if response.status_code != 204:
-                failure_log += f'failed to cleanup {job}: {response.text}\n'
-
+                if response.status_code != 204:
+                    failure_log += f'failed to cleanup {job}: {response.text}\n'
+            except:
+                pass
         if failure_log:
             raise AssertionError(failure_log)
 
@@ -236,7 +240,7 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual(f'"{job_bundle_name}"\n', response.text)
         self.assertEqual('active', job_content['status'])
 
-        time.sleep(8)
+        time.sleep(self.wait_time)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
         submitted_job_dirs = glob(f'{self.working_dir_path}/{job_bundle_name}*')
@@ -414,7 +418,7 @@ class TestScheduleJobs(unittest.TestCase):
         job_bundle_name, _ = self._submit_and_schedule_job()
         response = self._update_job_schedule(job_bundle_name, new_schedule)
 
-        time.sleep(5)
+        time.sleep(self.wait_time)
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
         self.assertEqual(204, response.status_code)
@@ -429,7 +433,7 @@ class TestScheduleJobs(unittest.TestCase):
         job_payload['schedule'] = {}
 
         response = self._schedule_job(job_payload)
-        time.sleep(4)
+        time.sleep(self.wait_time)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
@@ -503,12 +507,10 @@ class TestScheduleJobs(unittest.TestCase):
 
         job_bundle_name, _ = self._submit_and_schedule_job()
         self._pause_job(job_bundle_name)
-
-        time.sleep(7)
+        time.sleep(self.wait_time)
 
         response = self._resume_job(job_bundle_name)
-
-        time.sleep(8)
+        time.sleep(self.wait_time)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
@@ -518,7 +520,6 @@ class TestScheduleJobs(unittest.TestCase):
     def test_can_pause_job_twice(self):
         from glob import glob
         import time
-        
 
         job_bundle_name, _ = self._submit_and_schedule_job()
         self._pause_job(job_bundle_name)
@@ -608,14 +609,14 @@ class TestScheduleJobs(unittest.TestCase):
         self._pause_job(job_bundle_1)
 
         self._stop_server()
-        time.sleep(2)
+        time.sleep(self.wait_time)
         self._start_server()
-        time.sleep(1)
+        time.sleep(self.wait_time)
 
         self._resume_job(job_bundle_0)
         self._resume_job(job_bundle_1)
 
-        time.sleep(7)
+        time.sleep(wait_time)
 
         runs_from_scheduled_job_0 = glob(f'{self.archives_dir_path}/{job_bundle_0}_*')
         self.assertIn(len(runs_from_scheduled_job_0), [2, 3])
