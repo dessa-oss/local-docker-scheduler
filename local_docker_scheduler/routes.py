@@ -20,7 +20,7 @@ import docker_worker_pool
 import logging
 from tracker_client_plugins import tracker_clients
 from .scheduled_jobs_routes import *
-from .constants import _JOB_STORE_DIR, _ARCHIVE_DIR
+from .constants import _JOB_BUNDLE_STORE_DIR, _ARCHIVE_DIR
 from reverse_proxy import forward
 
 app = get_app()
@@ -38,7 +38,7 @@ def save_job_bundle():
         return "Job bundle not found in request", 400
 
     bundle_file = request.files['job_bundle']
-    tarball = path.join(_JOB_STORE_DIR, secure_filename(bundle_file.filename))
+    tarball = path.join(_JOB_BUNDLE_STORE_DIR, secure_filename(bundle_file.filename))
     bundle_file.save(tarball)
 
     try:
