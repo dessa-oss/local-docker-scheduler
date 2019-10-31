@@ -21,7 +21,7 @@ from db import queue, running_jobs, completed_jobs, failed_jobs, peek_lock, gpu_
 from local_docker_scheduler import get_app
 from tracker_client_plugins import tracker_clients
 from reverse_proxy import routing_map, my_url
-from local_docker_scheduler.constants import _WORKING_DIR, _JOB_STORE_DIR
+from local_docker_scheduler.constants import _WORKING_DIR, _JOB_BUNDLE_STORE_DIR
 
 
 _workers = {}
@@ -72,7 +72,7 @@ class DockerWorker:
 
         routing_map['job_id'][job_id] = my_url
 
-        with tarfile.open(path.join(_JOB_STORE_DIR, f"{job_id}.tgz")) as tar:
+        with tarfile.open(path.join(_JOB_BUNDLE_STORE_DIR, f"{job_id}.tgz")) as tar:
             tar.extractall(path=_WORKING_DIR)
 
         job['spec']['detach'] = True
