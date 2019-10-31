@@ -9,9 +9,11 @@ from db.redis_connection import RedisDict
 
 import os
 my_url = os.environ.get("SCHEDULER_HOST_URL")
+redis_host = os.environ.get("REDIS_HOST")
+redis_port = os.environ.get("REDIS_PORT")
 routing_map = dict()
 for key_type in ["job_id"]:
-    routing_map[key_type] = RedisDict(f"routing_map:{key_type}", "atlas-ce-tracker", "6379")
+    routing_map[key_type] = RedisDict(f"routing_map:{key_type}", redis_host, redis_port)
 
 
 def _proxy(new_host_url):
