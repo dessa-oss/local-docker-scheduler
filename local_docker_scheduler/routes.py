@@ -20,7 +20,7 @@ import docker_worker_pool
 import logging
 from tracker_client_plugins import tracker_clients
 from .scheduled_jobs_routes import *
-from .constants import _WORKING_DIR, _ARCHIVE_DIR
+from .constants import _JOB_STORE_DIR, _ARCHIVE_DIR
 from reverse_proxy import forward
 
 app = get_app()
@@ -37,19 +37,14 @@ def save_job_bundle():
     if 'job_bundle' not in request.files:
         return "Job bundle not found in request", 400
 
-    temp_dir = tempfile.mkdtemp()
     bundle_file = request.files['job_bundle']
-    tarball = path.join(temp_dir, secure_filename(bundle_file.filename))
+    tarball = path.join(_JOB_STORE_DIR, secure_filename(bundle_file.filename))
     bundle_file.save(tarball)
 
     try:
-        with tarfile.open(tarball) as tar:
-            tar.extractall(path=_WORKING_DIR)
         return 'Job bundle uploaded', 200
     except tarfile.ReadError:
         return 'Invalid job bundle', 400
-    finally:
-        shutil.rmtree(temp_dir, ignore_errors=True)
 
 @app.route('/job_bundle/<string:job_id>', methods=['GET'])
 def get_job_bundle(job_id):
