@@ -65,7 +65,7 @@ class TestSubmitJobBundle(unittest.TestCase):
         finally:
             shutil.rmtree(self.job_id)
 
-    def test_can_upload_and_untar_bundle_via_rest_api(self):
+    def test_can_upload_bundle_via_rest_api(self):
         import os
         import requests
 
@@ -82,12 +82,6 @@ class TestSubmitJobBundle(unittest.TestCase):
 
         self.assertEqual(200, response.status_code)
         self.assertEqual('Job bundle uploaded', response.text)
-
-        with open(f'{self.working_dir_path}/{self.job_id}/file_0', 'r') as file_0:
-            self.assertEqual('hello world', file_0.read())
-
-        with open(f'{self.working_dir_path}/{self.job_id}/file_1', 'r') as file_1:
-            self.assertEqual('goodbye world', file_1.read())
 
     def test_submitting_job_bundle_with_no_files_returns_correct_error_and_status_code(self):
         import os
