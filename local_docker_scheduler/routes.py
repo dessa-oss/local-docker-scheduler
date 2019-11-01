@@ -72,25 +72,36 @@ def _archive_directory_exists(job_id):
         return True
     return False
 
+def _is_job_bundle_valid_tar(job_id):
+    import os
+
+    try:
+        return tarfile.is_tarfile(os.path.join(_JOB_BUNDLE_STORE_DIR, f'{job_id}.tgz'))
+    except Exception:
+        return False
+
 @app.route('/queued_jobs', methods=['GET', 'POST'])
 def queued_jobs():
     if request.method == 'POST':
         job = request.json
-        try:
-            job_id = job.get('job_id', str(uuid4()))
-        except AttributeError:
+        if not job:
             return "Job must contain json payload", 400
+
         try:
             queue.append({'queued_time': time(),
-                          'job_id': job_id,
+                          'job_id': job['job_id'],
                           'spec': job['spec'],
                           'metadata': job.get('metadata', {}),
                           'gpu_spec': job.get('gpu_spec', {})})
         except KeyError:
-            return "Bad job spec", 400
+            return "Bad job spec: job_id and spec are required", 400
+
+        if not _is_job_bundle_valid_tar(job['job_id']):
+            return f"Job bundle {job['job_id']}.tgz not found", 400
+
         tracker_clients.queued(queue[-1])
 
-        return make_response(jsonify(job_id), 201)
+        return make_response(jsonify(job['job_id']), 201)
     else:
         return jsonify({i: {**val, 'position': i} for i, val in enumerate(queue)})
 
