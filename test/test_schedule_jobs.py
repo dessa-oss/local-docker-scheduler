@@ -610,10 +610,10 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(self.wait_time)
 
         runs_from_scheduled_job_0 = glob(f'{self.archives_dir_path}/{job_bundle_0}_*')
-        self.assertIn(len(runs_from_scheduled_job_0), [2, 3])
+        self.assertIn(len(runs_from_scheduled_job_0), [2, 3, 4])
 
         runs_from_scheduled_job_1 = glob(f'{self.archives_dir_path}/{job_bundle_1}_*')
-        self.assertIn(len(runs_from_scheduled_job_1), [2, 3])
+        self.assertIn(len(runs_from_scheduled_job_1), [2, 3, 4])
 
         jobs_information = self._scheduled_jobs().json()
         self.assertEqual('active', jobs_information[job_bundle_0]['status'])

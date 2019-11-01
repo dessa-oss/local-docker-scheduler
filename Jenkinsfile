@@ -26,8 +26,7 @@ pipeline{
         stage('Install Test Requirements') {
             steps {
                 container("python3") {
-                    
-                    sh './ci_install_requirements.sh'                    
+                    sh './ci_install_requirements.sh'
                 }
             }
         }
@@ -67,7 +66,6 @@ pipeline{
                         color: '#FF0000'
                     ]
                 ]
-
                 slackSend(channel: '#f9s-builds', attachments: attachments)
             }
         }
