@@ -5,8 +5,6 @@ import uuid
 class TestScheduleJobs(unittest.TestCase):
 
     random_string = str(uuid.uuid4())[:8]
-    archives_dir_path = '/tmp/local_docker_scheduler/archives_dir'
-    working_dir_path = '/tmp/local_docker_scheduler/working_dir'
     _server_process = None
     wait_time = 7
 
@@ -14,12 +12,18 @@ class TestScheduleJobs(unittest.TestCase):
     def setUpClass(cls):
         import docker
         import time
+        import os
 
         client = docker.from_env()
         client.images.pull('python:3.6-alpine')
 
         cls.archives_dir_path = f'/tmp/local_docker_scheduler/archives_dir_{cls.random_string}'
         cls.working_dir_path = f'/tmp/local_docker_scheduler/working_dir_{cls.random_string}'
+        cls.job_bundle_store_dir_path = f'/tmp/local_docker_scheduler/job_bundle_store_dir_{cls.random_string}'
+
+        os.makedirs(cls.archives_dir_path)
+        os.makedirs(cls.working_dir_path)
+        os.makedirs(cls.job_bundle_store_dir_path)
 
         cls._start_server()
         time.sleep(1)
@@ -51,7 +55,8 @@ class TestScheduleJobs(unittest.TestCase):
             self._cleanup_jobs()
             archive_files = glob.glob(f'{self.archives_dir_path}/*')
             working_dir_files = glob.glob(f'{self.working_dir_path}/*')
-            for f in archive_files + working_dir_files:
+            job_bundle_dir_files = glob.glob(f'{self.job_bundle_store_dir_path}/*')
+            for f in archive_files + working_dir_files + job_bundle_dir_files:
                 shutil.rmtree(f)
         except Exception as e:
             print('Unable to delete jobs at the end of the test:', str(e))
@@ -60,11 +65,18 @@ class TestScheduleJobs(unittest.TestCase):
     def _start_server(cls):
         from subprocess import Popen
         import os
+        import yaml
+        with open('database.config.yaml', 'r') as f:
+            db_dict = yaml.load(f, Loader=yaml.FullLoader)
 
+        conn_info = db_dict['running_jobs']['args']
         env = os.environ
         env['WORKING_DIR'] = cls.working_dir_path
         env['ARCHIVE_DIR'] = cls.archives_dir_path
+        env['JOB_BUNDLE_STORE_DIR'] = cls.job_bundle_store_dir_path
         env['NUM_WORKERS'] = '0'
+        env['REDIS_HOST'] = conn_info['host']
+        env['REDIS_PORT'] = str(conn_info['port'])
         cls._server_process = Popen(['python', '-m', 'local_docker_scheduler', '-p', '5000'], env=env)
 
     @classmethod
