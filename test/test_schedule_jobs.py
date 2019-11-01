@@ -242,7 +242,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
         submitted_job_dirs = glob(f'{self.working_dir_path}/{job_bundle_name}*')
-        self.assertIn(len(runs_from_scheduled_job), [3, 4])
+        self.assertIn(len(runs_from_scheduled_job), [3, 4, 5])
         self.assertIn(len(submitted_job_dirs), [1, 2])
 
     def test_schedule_job_with_invalid_payload_gives_400(self):
