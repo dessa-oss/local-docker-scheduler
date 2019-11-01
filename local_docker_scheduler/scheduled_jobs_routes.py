@@ -8,8 +8,9 @@ Written by Eric lee <e.lee@dessa.com>, 08 2019
 import docker_worker_pool
 from local_docker_scheduler import get_app
 from flask import jsonify, request, make_response
-from .constants import _WORKING_DIR, _ARCHIVE_DIR
+from .constants import _JOB_BUNDLE_STORE_DIR
 import logging
+import tarfile
 
 app = get_app()
 
@@ -50,7 +51,7 @@ def create_scheduled_job():
     if not isinstance(schedule, dict) or job_id is None or not isinstance(spec, dict):
         return "Job must contain valid 'job_id', 'spec'", 400
 
-    if not _job_directory_exists(job_id):
+    if not _is_job_bundle_valid_tar(job_id):
         return 'Cannot schedule a job that has no uploaded bundle', 409
 
     scheduled_job = {'job_id': job_id,
@@ -123,7 +124,6 @@ def update_scheduled_job_status(job_id):
 @app.route('/scheduled_jobs/<string:job_id>', methods=['PATCH'])
 def update_scheduled_job_schedule(job_id):
     from werkzeug.exceptions import BadRequest
-    from docker_worker_pool import DockerWorker
     worker = docker_worker_pool.cron_worker_by_job_id(job_id)
     _cron_workers = docker_worker_pool.get_cron_workers()
     if not worker:
@@ -177,12 +177,13 @@ def _scheduled_job_response_entry(job):
     }
 
 
-def _job_directory_exists(job_id):
+def _is_job_bundle_valid_tar(job_id):
     import os
 
-    if job_id in os.listdir(_WORKING_DIR):
-        return True
-    return False
+    try:
+        return tarfile.is_tarfile(os.path.join(_JOB_BUNDLE_STORE_DIR, f'{job_id}.tgz'))
+    except Exception:
+        return False
 
 
 def _schedule_dict(trigger):
@@ -218,8 +219,6 @@ def _update_job(worker, new_schedule):
         _cron_workers[worker_index] = DockerWorker(old_scheduled_job.id, scheduled_job)
 
 def _recreate_cron_worker(scheduled_job):
-    from docker_worker_pool import DockerWorker
-
     schedule = _schedule_dict(scheduled_job.trigger)
 
     recreated_scheduled_job = get_app().apscheduler.add_job(func=scheduled_job.func,
