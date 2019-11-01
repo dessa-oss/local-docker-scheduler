@@ -238,7 +238,7 @@ class TestScheduleJobs(unittest.TestCase):
         self.assertEqual(f'"{job_bundle_name}"\n', response.text)
         self.assertEqual('active', job_content['status'])
 
-        time.sleep(self.wait_time)
+        time.sleep(self.wait_time * 1.5)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
         submitted_job_dirs = glob(f'{self.working_dir_path}/{job_bundle_name}*')
@@ -505,7 +505,7 @@ class TestScheduleJobs(unittest.TestCase):
         time.sleep(self.wait_time)
 
         response = self._resume_job(job_bundle_name)
-        time.sleep(self.wait_time)
+        time.sleep(self.wait_time * 1.5)
 
         runs_from_scheduled_job = glob(f'{self.archives_dir_path}/{job_bundle_name}_*')
 
@@ -586,7 +586,7 @@ class TestScheduleJobs(unittest.TestCase):
         runs_from_scheduled_job_1 = glob(f'{self.archives_dir_path}/{job_bundle_1}_*')
 
         self.assertIn(len(runs_from_scheduled_job_0), [0, 1])
-        self.assertIn(len(runs_from_scheduled_job_1), [2, 3])
+        self.assertIn(len(runs_from_scheduled_job_1), [2, 3, 4])
 
         jobs_information = self._scheduled_jobs().json()
         self.assertEqual('paused', jobs_information[job_bundle_0]['status'])
