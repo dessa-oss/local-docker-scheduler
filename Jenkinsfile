@@ -41,10 +41,8 @@ pipeline{
         stage('Build and Push Scheduler Package Image') {
             steps {
                 container("python3") {
-                    ws("${WORKSPACE}/foundations_model_package/src"){
-                        sh 'docker login $NEXUS_DOCKER_REGISTRY -u $NEXUS_USER -p $NEXUS_PASSWORD'
-                        sh './build_and_push.sh'
-                    }
+                    sh 'docker login $NEXUS_DOCKER_REGISTRY -u $NEXUS_USER -p $NEXUS_PASSWORD'
+                    sh './build_and_push.sh'
                 }
             }
         }
@@ -57,24 +55,24 @@ pipeline{
             }
         }
     }
-    // post {
-    //     failure {
-    //         script {
-    //             def output_logs = String.join('\n', currentBuild.rawBuild.getLog(200))
-    //             def attachments = [
-    //                 [
-    //                     pretext: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
-    //                     text: output_logs,
-    //                     fallback: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
-    //                     color: '#FF0000'
-    //                 ]
-    //             ]
+    post {
+        failure {
+            script {
+                def output_logs = String.join('\n', currentBuild.rawBuild.getLog(200))
+                def attachments = [
+                    [
+                        pretext: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
+                        text: output_logs,
+                        fallback: '@channel Build failed for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.',
+                        color: '#FF0000'
+                    ]
+                ]
 
-    //             slackSend(channel: '#f9s-builds', attachments: attachments)
-    //         }
-    //     }
-    //     success {
-    //         slackSend color: '#00FF00', message: 'Build succeeded for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.'
-    //     }
-    // }
+                slackSend(channel: '#f9s-builds', attachments: attachments)
+            }
+        }
+        success {
+            slackSend color: '#00FF00', message: 'Build succeeded for `' + env.JOB_NAME + '` please visit ' + env.BUILD_URL + ' for more details.'
+        }
+    }
 }
