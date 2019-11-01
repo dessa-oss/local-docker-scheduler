@@ -41,9 +41,9 @@ def save_job_bundle():
     tarball = path.join(_JOB_BUNDLE_STORE_DIR, secure_filename(bundle_file.filename))
     bundle_file.save(tarball)
 
-    try:
+    if tarfile.is_tarfile(tarball):
         return 'Job bundle uploaded', 200
-    except tarfile.ReadError:
+    else:
         return 'Invalid job bundle', 400
 
 @app.route('/job_bundle/<string:job_id>', methods=['GET'])
