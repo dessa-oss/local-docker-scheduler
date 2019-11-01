@@ -72,8 +72,7 @@ class DockerWorker:
 
         routing_map['job_id'][job_id] = my_url
 
-        with tarfile.open(path.join(_JOB_BUNDLE_STORE_DIR, f"{job_id}.tgz")) as tar:
-            tar.extractall(path=_WORKING_DIR)
+        _extract_job_bundle_to_working_dir_if_not_exist(job_id)
 
         job['spec']['detach'] = True
 
@@ -408,6 +407,7 @@ def cron_worker_job(cron_worker_index, scheduled_job):
     old_job_id = scheduled_job['job_id']
     new_job_id = f'{old_job_id}_{timestamp}'
 
+    _extract_job_bundle_to_working_dir_if_not_exist(old_job_id)
     _create_scheduled_run_directory(old_job_id, new_job_id)
     scheduled_job_run = _create_scheduled_run_job_spec(scheduled_job, new_job_id)
 
@@ -445,3 +445,8 @@ def _rewrite_volumes(spec_volumes, new_job_id):
         new_volumes[host_path] = volume_information
 
     return new_volumes
+
+def _extract_job_bundle_to_working_dir_if_not_exist(job_id):
+    if not os.path.isdir(path.join(_WORKING_DIR, f"{job_id}")):
+        with tarfile.open(path.join(_JOB_BUNDLE_STORE_DIR, f"{job_id}.tgz")) as tar:
+            tar.extractall(path=_WORKING_DIR)
