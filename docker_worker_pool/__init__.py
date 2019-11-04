@@ -334,7 +334,11 @@ def delete_worker(worker_id, reschedule=False):
     del _workers[worker_id]
 
 def delete_cron_worker(worker_id):
-    _cron_workers[worker_id].delete(reschedule=False)
+    from flask_apscheduler.scheduler import JobLookupError
+    try:
+        _cron_workers[worker_id].delete(reschedule=False)
+    except JobLookupError:
+        logging.warning(f"Job ID {_cron_workers[worker_id].apscheduler_job.name} already removed from job store")
     del _cron_workers[worker_id]
 
 def delete_cron_job(job_id):

@@ -103,7 +103,16 @@ def update_scheduled_job_status(job_id):
             now = datetime.now(get_localzone())
             next_fire_time = job.trigger.get_next_fire_time(None, now)
             job.next_run_time = next_fire_time
-            job.resume()
+            resume_result = job.resume()
+            if not resume_result:
+                try:
+                    logging.warning(f"Job ID {job_id} has expired. Cleaning up job...")
+                    docker_worker_pool.delete_cron_job(job_id)
+                    return "Cannot mark expired monitor as active. Job will be removed.", 400
+                except Exception as ex:
+                    logging.warning(str(ex))
+                    return "Unable to process update for expired job", 400
+
             return make_response(jsonify({}), 204)
         else:
             return 'Invalid status', 400
