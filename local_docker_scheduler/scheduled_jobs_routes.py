@@ -188,7 +188,8 @@ def _get_status_and_next_three_runtimes(job):
         next_run_timestamp = _convert_datetime_to_timestamp(next_run_datetime)
         list_of_next_three_runtimes.append(next_run_timestamp)
         for _ in range(2):
-            next_run_datetime = _get_next_runtime(job, next_run_datetime, next_run_datetime + timedelta(milliseconds=1))
+            if next_run_datetime is not None:
+                next_run_datetime = _get_next_runtime(job, next_run_datetime, next_run_datetime + timedelta(milliseconds=1))
             next_run_timestamp = _convert_datetime_to_timestamp(next_run_datetime)
             list_of_next_three_runtimes.append(next_run_timestamp)
 
@@ -197,6 +198,9 @@ def _get_status_and_next_three_runtimes(job):
 def _convert_datetime_to_timestamp(datetime_object):
     from datetime import datetime
     import math
+
+    if datetime_object is None:
+        return None
     timestamp_float = datetime.timestamp(datetime_object)
     timestamp = math.floor(timestamp_float)
     return timestamp
