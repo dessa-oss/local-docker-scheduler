@@ -5,15 +5,33 @@ from flask import request, Response
 import requests
 
 from db.redis_connection import RedisDict
+import redis
 
 
 import os
-my_url = os.environ.get("SCHEDULER_HOST_URL")
-redis_host = os.environ.get("REDIS_HOST")
-redis_port = os.environ.get("REDIS_PORT")
+my_url = os.environ.get("SCHEDULER_HOST_URL", None)
+redis_host = os.environ.get("REDIS_HOST", None)
+redis_port = os.environ.get("REDIS_PORT", "")
 routing_map = dict()
+
+
+if my_url is None:
+    logging.info("Self URL not specified; operating in local mode")
+else:
+    if redis_host is None:
+        logging.info("Proxy routing map host not specified; operating in local mode")
+    else:
+        logging.info(f"Proxy routing map host found, connecting to {redis_host}:{redis_port}")
+
 for key_type in ["job_id"]:
-    routing_map[key_type] = RedisDict(f"routing_map:{key_type}", redis_host, redis_port)
+    if redis_host is None or my_url is None:
+        routing_map[key_type] = dict()
+    else:
+        try:
+            routing_map[key_type] = RedisDict(f"routing_map:{key_type}", redis_host, redis_port)
+        except redis.ConnectionError:
+            logging.warning("Cannot connect to proxy routing map host; operating in local mode")
+            routing_map[key_type] = dict()
 
 
 def _proxy(new_host_url):
