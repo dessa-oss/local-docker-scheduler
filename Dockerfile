@@ -19,7 +19,7 @@ WORKDIR /app/local-docker-scheduler
 
 RUN mkdir /job_bundle_store_dir
 
-VOLUME ["/root/.docker", "/var/run/docker.sock", "/app/local-docker-scheduler/tracker_client_plugins.yaml", "/app/local-docker-scheduler/database.config.yaml", "/archives", "/working_dir", "/job_bundle_store_dir]
+VOLUME ["/root/.docker", "/var/run/docker.sock", "/app/local-docker-scheduler/tracker_client_plugins.yaml", "/app/local-docker-scheduler/database.config.yaml", "/archives", "/working_dir", "/job_bundle_store_dir"]
 
 EXPOSE 5000
 
