@@ -12,6 +12,8 @@ from pickle import loads, dumps
 class RedisDict:
     def __init__(self, key, host, port, db=0):
         self._redis = redis.StrictRedis(host, port, db)
+        # try the connection; allow user of class to handle exception themselves
+        self._redis.ping()
         self._key = key
 
     def __getitem__(self, field):
@@ -39,6 +41,8 @@ class RedisDict:
 class RedisList:
     def __init__(self, key, host, port, db=0):
         self._redis = redis.StrictRedis(host, port, db)
+        # try the connection; allow user of class to handle exception themselves
+        self._redis.ping()
         self._key = key
 
     def __getitem__(self, index):
