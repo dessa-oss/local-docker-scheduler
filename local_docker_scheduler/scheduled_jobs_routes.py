@@ -27,8 +27,7 @@ def _check_for_parameter(parameter):
 
 @app.route('/scheduled_jobs', methods=['GET'])
 def scheduled_jobs():
-    current_scheduled_jobs = docker_worker_pool.get_cron_workers()
-    full_list_of_scheduled_jobs = {worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values()}
+    full_list_of_scheduled_jobs = {job.name: _scheduled_job_response_entry(job) for job in app.apscheduler.get_jobs(jobstore='redis')}
 
     if _check_for_parameter('project'):
         project = _check_for_parameter('project')
@@ -149,19 +148,18 @@ def update_scheduled_job_schedule(job_id):
 
 @app.route('/scheduled_jobs/<string:job_id>', methods=['GET'])
 def scheduled_job(job_id):
-    current_scheduled_jobs = docker_worker_pool.get_cron_workers()
-    response = {worker.apscheduler_job.name: _scheduled_job_response_entry(worker) for worker in current_scheduled_jobs.values() if worker.apscheduler_job.name == job_id}
+    response = {job.name: _scheduled_job_response_entry(job) for job in app.apscheduler.get_jobs(jobstore='redis') if job.name == job_id}
 
     if response:
         return jsonify(response)
     return f'Scheduled job {job_id} not found', 404
 
 
-def _scheduled_job_response_entry(worker):
+def _scheduled_job_response_entry(job):
     from datetime import datetime
     import math
 
-    next_run_datetime = worker.apscheduler_job.next_run_time
+    next_run_datetime = job.next_run_time
 
     if next_run_datetime is None:
         status = 'paused'
@@ -173,9 +171,9 @@ def _scheduled_job_response_entry(worker):
 
     return {
         'next_run_time': next_run_timestamp,
-        'schedule': _schedule_dict(worker.apscheduler_job.trigger),
+        'schedule': _schedule_dict(job.trigger),
         'status': status,
-        'properties': worker.apscheduler_job.args[1]
+        'properties': job.args[1]
     }
 
 
