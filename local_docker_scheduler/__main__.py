@@ -5,14 +5,15 @@ Proprietary and confidential
 Written by Eric lee <e.lee@dessa.com>, 08 2019
 """
 
+import logging
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)
+
 from local_docker_scheduler import get_app
 import local_docker_scheduler.routes # so that the routes are loaded into the app
 from db import gpu_pool
-import logging
 import argparse
 import sys
 import os
-
 
 def get_args():
     parser = argparse.ArgumentParser(description='Starts a local docker scheduler')
@@ -24,8 +25,6 @@ def get_args():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)
-
     args = get_args()
 
     if os.environ.get("CUDA_VISIBLE_DEVICES", None):
