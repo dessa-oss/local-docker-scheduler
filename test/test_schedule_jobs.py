@@ -306,7 +306,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         self.assertEqual(201, response.status_code)
         self.assertEqual(f'"{job_bundle_name}"\n', response.text)
-        self.assertIsNone(job_content['next_run_time'])
+        self.assertListEqual([None, None, None], job_content['next_run_time'])
         self.assertEqual('paused', job_content['status'])
 
     def test_schedule_too_many_jobs_returns_400(self):
@@ -355,7 +355,7 @@ class TestScheduleJobs(unittest.TestCase):
 
         for job_bundle in [job_bundle_0, job_bundle_1]:
             self.assertEqual(expected_schedule, response_json[job_bundle]['schedule'])
-            self.assertLessEqual(response_json[job_bundle]['next_run_time'] - now, 9)
+            self.assertLessEqual(response_json[job_bundle]['next_run_time'][0] - now, 9)
 
     def test_schedule_job_with_no_bundle_gives_409_conflict(self):
         job_bundle_name = 'fake_job'
@@ -680,13 +680,13 @@ class TestScheduleJobs(unittest.TestCase):
 
         self.assertEqual([job_bundle_0], list(response_0_json.keys()))
         self.assertEqual(expected_schedule, job_bundle_0_content['schedule'])
-        self.assertIsNone(job_bundle_0_content['next_run_time'])
+        self.assertListEqual([None, None, None], job_bundle_0_content['next_run_time'])
         self.assertEqual('paused', job_bundle_0_content['status'])
         self.assertEqual(expected_properties_0, job_bundle_0_content['properties'])
 
         self.assertEqual([job_bundle_1], list(response_1_json.keys()))
         self.assertEqual(expected_schedule, job_bundle_1_content['schedule'])
-        self.assertLessEqual(job_bundle_1_content['next_run_time'] - now, 9)
+        self.assertLessEqual(job_bundle_1_content['next_run_time'][0] - now, 9)
         self.assertEqual('active', job_bundle_1_content['status'])
         self.assertEqual(expected_properties_1, job_bundle_1_content['properties'])
 

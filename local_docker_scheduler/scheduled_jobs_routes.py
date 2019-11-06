@@ -156,26 +156,50 @@ def scheduled_job(job_id):
 
 
 def _scheduled_job_response_entry(job):
-    from datetime import datetime
-    import math
 
-    next_run_datetime = job.next_run_time
-
-    if next_run_datetime is None:
-        status = 'paused'
-        next_run_timestamp = None
-    else:
-        status = 'active'
-        next_run_timestamp_float = datetime.timestamp(next_run_datetime)
-        next_run_timestamp = math.floor(next_run_timestamp_float)
+    status, next_three_runtimes = _get_status_and_next_three_runtimes(job)
 
     return {
-        'next_run_time': next_run_timestamp,
+        'next_run_time': next_three_runtimes,
         'schedule': _schedule_dict(job.trigger),
         'status': status,
         'properties': job.args[1]
     }
 
+def _get_next_runtime(job, previous_runtime=None, now=None):
+    from datetime import datetime
+    from tzlocal import get_localzone
+    if not now:
+        now = datetime.now(get_localzone())
+
+    return job.trigger.get_next_fire_time(previous_runtime, now)
+
+def _get_status_and_next_three_runtimes(job):
+    from datetime import timedelta
+
+    next_run_datetime = job.next_run_time
+
+    if next_run_datetime is None:
+        status = 'paused'
+        list_of_next_three_runtimes = [None, None, None]
+    else:
+        status = 'active'
+        list_of_next_three_runtimes = []
+        next_run_timestamp = _convert_datetime_to_timestamp(next_run_datetime)
+        list_of_next_three_runtimes.append(next_run_timestamp)
+        for _ in range(2):
+            next_run_datetime = _get_next_runtime(job, next_run_datetime, next_run_datetime + timedelta(milliseconds=1))
+            next_run_timestamp = _convert_datetime_to_timestamp(next_run_datetime)
+            list_of_next_three_runtimes.append(next_run_timestamp)
+
+    return status, list_of_next_three_runtimes
+
+def _convert_datetime_to_timestamp(datetime_object):
+    from datetime import datetime
+    import math
+    timestamp_float = datetime.timestamp(datetime_object)
+    timestamp = math.floor(timestamp_float)
+    return timestamp
 
 def _job_directory_exists(job_id):
     import os
