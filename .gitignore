@@ -1,0 +1,16 @@
+venv
+*.sqlite
+.idea
+__pycache__
+*.yaml
+*.pyc
+archives
+working_dir
+archives_dir
+.vscode
+.env
+.venv
+Pipfile*
+*.egg-info
+dist
+.history

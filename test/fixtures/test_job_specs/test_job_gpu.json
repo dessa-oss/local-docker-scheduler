@@ -1,0 +1,29 @@
+{"spec":
+	{
+		"image": "python:3.6-alpine",
+		"volumes": {
+			"/path/to/your/job/source/store//client/should/make/sure/this/is/mutable": {
+				"bind": "/job/job_source",
+				"mode": "rw"
+			},
+			"/path/to/your/job/archive/store//client/should/make/sure/this/cannot/contaminate/other/job/archives": {
+				"bind": "/job/job_archive",
+				"mode": "rw"
+			}
+		},
+		"working_dir": "/job/job_source",
+		"environment": {
+			"JOB_ID": "123",
+			"ENTRYPOINT": "test.py"
+		},
+		"entrypoint": [
+			"/bin/sh",
+			"-c"
+		],
+		"command": [
+			"python ${ENTRYPOINT}"
+		],
+		"runtime": "nvidia"
+	},
+"metadata": {"project_name":  "test", "username": "shaz"}
+}
